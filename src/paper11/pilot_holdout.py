@@ -1,15 +1,21 @@
 """Re-run the locked pilot rule on the November 2026 Bondora workbook."""
 import argparse
+from base64 import b64encode
+from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
+from decimal import Decimal
 import hashlib
+from http.client import HTTPException
 from pathlib import Path
+import tempfile
+from urllib.request import Request, urlopen
 from xml.etree import ElementTree as ET
 from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
 
-from .data import fetch_pinned
+from .data import checksum
 from .lender_pilot import after_signal, margin
 from .pilot_rule import CAPACITY, TOL, predict
 
@@ -17,6 +23,10 @@ URL = ("https://sabanners001.blob.core.windows.net/statistics/public/loan_datase
        "?versionid=2026-11-04T11%3A36%3A30.9618009Z")
 SHA256 = "463277de6f9c2aae2a726b8064bd8d36682222bc02424a30321c824fd2ef763f"
 FILE = "bondora-20261104.xlsx"
+WORKBOOK_BYTES = 139650301
+BLOB_ETAG = '"0x8DF3A67DF23CE49"'
+BLOB_VERSION = "2026-11-04T11:36:30.9618009Z"
+AZURE_RANGE = 4 * 1024 * 1024
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 CASH = ["principal_paid_total", "interest_paid_total", "extra_interest_paid_total", "late_fee_paid_total"]
 FIELDS = ["loan_issued_at", "country", "customer_risk_rating", "issued_amount",
@@ -28,8 +38,48 @@ WINDOWS = {
 }
 
 
+def _workbook_range(start):
+    """Fetch one version-bound Azure range, with its server-computed transaction hash."""
+    end = min(start + AZURE_RANGE, WORKBOOK_BYTES) - 1
+    interval = f"bytes={start}-{end}"
+    expected_range = f"bytes {start}-{end}/{WORKBOOK_BYTES}"
+    headers = {"User-Agent": "Paper11-academic-replication/1.0", "x-ms-version": "2023-11-03",
+               "If-Match": BLOB_ETAG, "Range": interval, "x-ms-range-get-content-md5": "true"}
+    # The publication URL is usable only while it serves this same provider version.
+    for route in (URL, URL.partition("?")[0], URL):
+        try:
+            with urlopen(Request(route, headers=headers), timeout=60) as response:
+                if (response.status != 206 or response.getheader("Content-Range") != expected_range
+                        or response.getheader("ETag") != BLOB_ETAG
+                        or response.getheader("x-ms-version-id") != BLOB_VERSION):
+                    raise ValueError(f"unexpected Azure response for {interval}")
+                chunk = response.read(end - start + 2)
+                digest = b64encode(hashlib.md5(chunk, usedforsecurity=False).digest()).decode("ascii")
+                if len(chunk) != end - start + 1 or digest != response.getheader("Content-MD5"):
+                    raise ValueError(f"incomplete or corrupt Azure response for {interval}")
+                return chunk
+        except (OSError, HTTPException, ValueError) as exc:
+            last_error = exc
+    raise OSError(f"download failed for workbook range {interval}") from last_error
+
+
 def fetch_holdout(cache):
-    return fetch_pinned(URL, SHA256, Path(cache) / FILE, headers={"x-ms-version": "2023-11-03"})
+    path = Path(cache) / FILE
+    if path.exists() and checksum(path) == SHA256:
+        return path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
+        tmp = Path(handle.name)
+    try:
+        with tmp.open("wb") as output, ThreadPoolExecutor(max_workers=4) as pool:
+            for chunk in pool.map(_workbook_range, range(0, WORKBOOK_BYTES, AZURE_RANGE)):
+                output.write(chunk)
+        if tmp.stat().st_size != WORKBOOK_BYTES or checksum(tmp) != SHA256:
+            raise ValueError(f"{FILE} assembled bytes differ from the published fingerprint")
+        tmp.replace(path)
+        return path
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def read_positions(path):
@@ -71,7 +121,12 @@ def order_positions(frame):
     loans = frame.copy()
     serial = pd.to_numeric(loans.loan_issued_at, errors="coerce")
     if serial.notna().all():
-        dates = pd.to_datetime(serial, unit="D", origin="1899-12-30")
+        # Excel stores decimal days. Converting the raw decimal directly keeps
+        # both intra-day ordering and month boundaries independent of the platform.
+        day_ns = 86_400_000_000_000
+        elapsed = np.fromiter((int((Decimal(str(raw)) * day_ns).to_integral_value())
+                               for raw in loans.loan_issued_at), dtype=np.int64, count=len(loans))
+        dates = pd.Series(pd.to_datetime(elapsed, unit="ns", origin="1899-12-30"), index=loans.index)
     else:
         dates = pd.to_datetime(loans.loan_issued_at, format="mixed", errors="raise")
     if dates.isna().any() or loans.country.isna().any():
@@ -230,8 +285,8 @@ def run(out, cache):
         local = loans[loans.origin.between(a, b)]
         future = loans[loans.origin.between(a + 13, b + 13)]
         p = panel[panel["sample"].eq(sample)]
-        audit.append(dict(sample=sample, source_loans=len(loans), source_min_issue=loans.date.min(),
-                          source_max_issue=loans.date.max(), origin_start=a, origin_end=b,
+        audit.append(dict(sample=sample, source_loans=len(loans), source_min_issue=loans.date.min().date(),
+                          source_max_issue=loans.date.max().date(), origin_start=a, origin_end=b,
                           window_issued=len(local), window_missing_labels=local.event.isna().sum(),
                           window_missing_cash=local.cash.isna().sum(), followup_issued=len(future),
                           followup_missing_labels=future.event.isna().sum(),

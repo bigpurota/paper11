@@ -37,4 +37,4 @@ The [previous team project](https://github.com/bigpurota/paper15-lou-shu) used k
 
 ## Verified release run
 
-The November 18 release contains 72 research outputs and passes 131 regression and reference tests. Release checks use fresh output directories, an independently installed environment and file hashes for all nine downloaded archives (869,504,170 bytes). The 32-page slide deck can be regenerated from aggregate results and its editable template. [Reproduction commands](../README.md#reproduce)
+The November 18 release contains 72 research outputs and passes 134 regression and reference tests. Release checks use fresh output directories, an independently installed environment and file hashes for all nine downloaded archives (869,504,170 bytes). The 32-page slide deck can be regenerated from aggregate results and its editable template. [Reproduction commands](../README.md#reproduce)

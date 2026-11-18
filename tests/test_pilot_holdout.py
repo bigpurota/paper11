@@ -114,3 +114,44 @@ def test_sparse_xlsx_keeps_empty_cells_and_maps_column_addresses(tmp_path):
     row = read_positions(path).iloc[0]
     assert row.issued_amount == "75" and row.principal_paid_total == "0"
     assert pd.isna(row.has_default_within_12_months) and pd.isna(row.interest_paid_total)
+
+
+def test_excel_decimal_days_preserve_month_and_submillisecond_order():
+    frame = pd.DataFrame([record("45352.0"), record("45351.99999999999")])
+    dates = order_positions(frame).date.tolist()
+    midnight = pd.Timestamp("2024-03-01")
+    assert dates == [midnight - pd.Timedelta(nanoseconds=864), midnight]
+
+
+def test_versioned_download_retries_truncated_range(monkeypatch):
+    from base64 import b64encode
+    import hashlib
+    from io import BytesIO
+    from paper11 import pilot_holdout as source
+
+    valid = b"test"
+    responses = iter([b"te", valid])
+
+    class Range(BytesIO):
+        status = 206
+
+        def getheader(self, key):
+            return {"Content-Range": "bytes 0-3/4", "ETag": source.BLOB_ETAG,
+                    "x-ms-version-id": source.BLOB_VERSION,
+                    "Content-MD5": b64encode(hashlib.md5(valid, usedforsecurity=False).digest()).decode()}[key]
+
+    monkeypatch.setattr(source, "WORKBOOK_BYTES", len(valid))
+    monkeypatch.setattr(source, "urlopen", lambda request, timeout: Range(next(responses)))
+    assert source._workbook_range(0) == valid
+
+
+def test_failed_assembled_workbook_keeps_existing_cache(tmp_path, monkeypatch):
+    from paper11 import pilot_holdout as source
+
+    old = tmp_path / source.FILE
+    old.write_bytes(b"old")
+    monkeypatch.setattr(source, "WORKBOOK_BYTES", 4)
+    monkeypatch.setattr(source, "_workbook_range", lambda start: b"fail")
+    with pytest.raises(ValueError, match="fingerprint"):
+        source.fetch_holdout(tmp_path)
+    assert old.read_bytes() == b"old" and list(tmp_path.iterdir()) == [old]

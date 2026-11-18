@@ -2,7 +2,7 @@
 
 HSE DSBA Research Seminar · Team 12 · Round 3 · Paper 11
 
-Team 12: Andrey Tsember (scoring models, experiments and reproducible build), Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.
+Team 12: Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.
 
 We independently implement the central methods in [Kozodoi et al., assigned preprint and appendix](https://arxiv.org/abs/2407.13009v1), published in [European Journal of Operational Research](https://www.sciencedirect.com/science/article/pii/S0377221725000839). When a lender observes repayment only after approving an application, how well can it train a scorecard and measure risk among all applicants?
 

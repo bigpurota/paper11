@@ -1,65 +1,37 @@
-# Paper 11 presentation
+# Paper 11 defense
 
-Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–38 are for questions.
+The [nine-slide talk](paper11.pdf) takes about **9 minutes 30 seconds** at the planned pace. The [editable PowerPoint](paper11.pptx) has speaking notes for each slide. The detailed [evidence PDF](evidence.pdf) and [evidence PowerPoint](evidence.pptx) are separate files for questions.
 
-The cover, HSE mark, running header and three-rule tables follow the team’s [Paper 15 presentation](https://github.com/bigpurota/paper15-lou-shu/tree/0c5d43e18a5ef9134bc6fae656a29f204f31f7cb/slides).
+## Speaking plan
 
-## Fifteen-minute speaking plan
+| Elapsed | Slide | What to explain |
+|---|---:|---|
+| 0:00–0:25 | 1 | Introduce the lender’s missing-outcome problem. |
+| 0:25–1:20 | 2 | Use Monedo’s 39% and 66% bad rates to explain how the old policy selects the measured sample. |
+| 1:20–2:25 | 3 | Distinguish learning a score from evaluating a fixed score. |
+| 2:25–3:25 | 4 | Trace the same comparison through the paper figure and our simulation. |
+| 3:25–4:50 | 5 | Compare evaluation error and approved default rates on Monedo, Taiwan and Prosper. Explain the holdout design and uncertainty. |
+| 4:50–5:45 | 6 | Add the margins of the borrower groups between two approval cutoffs. |
+| 5:45–6:45 | 7 | Compare the loss on one experimental loan with the future gains its repayment could unlock. |
+| 6:45–8:05 | 8 | Use the early Dutch cohorts to distinguish an observable warning from a future default rate. |
+| 8:05–9:30 | 9 | Explain the rule, its external test and whether an approval decision changed. |
 
-| Elapsed time | Slide and subject |
+The seminar's 15-minute format leaves room to expand the same nine slides. Spend an extra 1:30 walking through the paper and simulation panels on slide 4, 1:30 on the two holdout designs and their limitations on slide 5, 1:00 on why an ordinary update also reaches a lender that declines the pilot on slide 7, and 1:30 on the external signal's definition and uncertainty on slide 9. This makes a 15-minute talk before the seminar's question period.
+
+## Evidence for questions
+
+| Evidence pages | Topic |
 |---|---|
-| 0:00–0:35 | 1. Research question and credits |
-| 0:35–1:30 | 2. Historical approvals and Monedo's randomized holdout |
-| 1:30–2:40 | 3. BASL training and Bayesian evaluation |
-| 2:40–3:40 | 4. Funded public cohorts and the outcome-maturity gap |
-| 3:40–5:00 | 5. Simulation against Figure 2 on identical axes |
-| 5:00–6:05 | 6. Evaluation RMSE against Table 2 |
-| 6:05–7:10 | 7. Training ABR against Table 3 |
-| 7:10–7:50 | 8. Which repayments matter for the choice of cutoff? |
-| 7:50–9:20 | 9. Twelve prospective Prosper forecasts |
-| 9:20–10:40 | 10. Four adjacent-band margins recover every difference between five cutoffs |
-| 10:40–12:05 | 11. Random assignment of credit offers in the Philippines |
-| 12:05–13:00 | 12. Two Taiwan histories match the same ten actual default counts and imply opposite decisions |
-| 13:00–13:55 | 13. Overfitting checks and limits |
-| 13:55–15:00 | 14. When does a loss-making test loan pay for itself? |
+| 1–7, 18, 20–23 | Algorithms, original simulation and paper tables, out-of-time test, AUC, calibration, logistic baseline and reproduction commands. |
+| 8–13, 15–17, 24–26 | Forecasting a later portfolio, which groups identify policy margins, random audits, bounds and overfitting. |
+| 11, 19 | Philippine offer lottery, observed outcomes and assumptions behind financial comparisons. |
+| 14, 27–32 | General break-even condition for a pilot, SBA and Bondora replays, Estonian pilot profiles and later validation. |
+| 33–38 | Finnish pilot, boosting and frequency comparisons, Dutch launch cohorts and Wells Fargo external test of pooling. |
 
-| Backup slide | Question or evidence |
-|---|---|
-| 15–18 | A 50-label audit, quarterly forecast trajectories, prior-odds bounds and calibration |
-| 19–22 | Repayment in the offer lottery, risk-decile lift, BASL stopping rules and all four paper metrics |
-| 23 | Sources and reproduction commands |
-| 24 | Scenario margins from the validation-selected loan cutoff |
-| 25 | Worst-case regret for five fixed or randomized approval cutoffs |
-| 26 | Expected audit size for the Prosper expansion and two break-even cases |
-| 27 | Can one recorded SBA repayment improve the next regional lending decision? |
-| 28 | Break-even horizons with one label versus repeated learning and the parameter grid |
-| 29 | Can the ex-ante ranking identify useful pilots on US and European funded loans? |
-| 30 | Which Bondora switch covered a pilot loss, and which underwriting change actually occurred at M-Shwari? |
-| 31 | Which origination facts distinguished the two Estonian cases, and how did information access affect the switches? |
-| 32 | Did the revised rule recover losses in later Bondora cohorts or at Prosper? |
-| 33 | Why did the rule pass over March 2021 and select the other two Finnish pilots? |
-| 34 | How much did boosting learn from a single pilot beyond ordinary information and other loans? |
-| 35 | Why did the historical rate track Finnish risk more closely than boosting? |
-| 36 | Did anchoring the forecast to the country rate change a later lending decision? |
-| 37 | Why did the Dutch historical frequency overpredict losses after launch? |
-| 38 | When did the blend of local and other-state frequencies improve a forecast at Wells Fargo? |
+The [paper comparison](../results/paper_comparison.csv), [simulation](../docs/simulation.md), [policy-margin proof](../docs/policy-information.md), [pilot break-even condition](../docs/information-value.md) and [research report](../results/report.md) give the exact definitions behind the short talk. The evidence pages keep their original numbering so they can be located during questions.
 
-## Updating the deck
+## Updating the slides
 
-From the repository root, run the analytical pipeline first, then run `python3 slides/build.py`. The slide builder uses Python's standard library and LibreOffice's `soffice` executable to generate both delivered files. Raw loan data are unnecessary when the aggregate CSV and PNG files are already present in `results/`.
+Run `python3 slides/build.py` from the repository root after regenerating the aggregate results. The builder refreshes numeric fields and figures and exports both PDFs using LibreOffice. It reads [the short talk template](talk-template.pptx) and [the evidence template](template.pptx). Both remain editable. Keep a dynamic field's double braces and its name within a single PowerPoint text run. Update explanatory text if a rerun changes a conclusion.
 
-[template.pptx](template.pptx) is the editable source. Native table cells and figures are linked to the results by the public [build script](build.py). Keep each double-braced field in one PowerPoint text run when editing a dynamic cell, and retain the figure alt text (`simulation_fig2.png`, `calibration.png`, `vintage_forecasts.png`, `bounds_frontier.png`). As well as updating the numbers, review the explanatory sentences when running a different experiment.
-
-Slide 12 uses the two-cutoff rows marked `oracle_decile_totals` in [witness worlds](../results/identification_worlds.csv) and [policy summaries](../results/identification_summary.csv). The group counts are disclosed retrospectively. Slide 26 takes the three Prosper sample-size expectations from [decision audit results](../results/decision_audit_summary.csv). Slide 25 uses the five-cutoff, unrestricted rows in the policy summaries.
-
-Slide 10 uses an illustrative four-band example and checks the aggregate counts in [policy information](../results/policy_information_summary.csv). Slide 14 scales the [one-pilot frontier](../results/information_value_frontier.csv) to principal 100. Slide 27 uses the chronological, early-national terms in the [SBA replay](../results/pilot_replay_summary.csv). Slide 28 compares the one-pilot rule with [repeated learning](../results/exploration_values.csv) and reports [parameter-grid counts](../results/information_value_stress.csv).
-
-Slide 29 uses the two principal tests in [pilot forecasting](../results/pilot_targeting_summary.csv). Slide 30 compares the October 2018 Estonian pilot on the [May 2024 ledger](../results/lender_pilot_followup.csv) with the TOBOA policy change documented in [field evidence](../docs/observed-pilot-evidence.md).
-
-Slides 31–32 link origination profiles to later observed cash and compare the dated test with the US cross-lender supplement. Numeric fields come from [profiles](../results/pilot_profiles_selected.csv) and the [policy evaluation](../results/pilot_rule_summary.csv). The case-level cash is valued at the common cutoff within each lender.
-
-Slides 33–34 use the [three Finnish cases](../results/finnish_pilot_cases.csv) and [paired model evaluation](../results/pilot_signal_ml_metrics.csv). Forecasts on these slides use information available at the date indicated. Gross cash uses the common workbook cutoff.
-
-Slides 35–36 use [earlier error profiles](../results/frequency_diagnosis_support.csv), [fresh forecast errors](../results/frequency_evaluation.csv), and [changes in lending decisions](../results/frequency_action_summary.csv). Both slides have editable native tables.
-
-Slide 37 compares the eight [Dutch vintage histories](../results/dutch_frequency_episodes.csv) with the [forecasts at issue](../results/dutch_trust.csv). Slide 38 reports [paired forecast losses](../results/local_trust_bank_metrics.csv) and [lending decisions at the prespecified cutoff](../results/local_trust_bank_policy.csv) for Wells Fargo state-quarters. The [dated protocol](../docs/local-trust-protocol.md) defines the weights and the comparison.
+Both presentations follow the cover, logo, running header and table rules from [the team’s Paper 15 slides](https://github.com/bigpurota/paper15-lou-shu/tree/0c5d43e18a5ef9134bc6fae656a29f204f31f7cb/slides). The figure bindings use the embedded image descriptions `simulation_fig2.png`, `calibration.png`, `vintage_forecasts.png` and `bounds_frontier.png`. The included tables and charts can be refreshed from the aggregate results without borrower records.

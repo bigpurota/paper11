@@ -1,0 +1,2 @@
+source_loans,source_tx,tagged_tx,regions,months,test_books,scored_books,test_loans,scored_loans,test_events,test_early6,test_early3,test_early3_events,already_short_by_month3,marked_at_risk,incident_marked,unmarked_at_risk,incident_unmarked,early_tagged_debits,early_negative_balance_debits,missing_early_debits,test_principal
+682,1056320,13580,8,24,143,143,313,313,24,15,17,12,11,6,1,296,12,1005,1,8,49049040

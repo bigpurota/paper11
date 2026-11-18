@@ -82,7 +82,7 @@ def fetch_holdout(cache):
         tmp.unlink(missing_ok=True)
 
 
-def read_positions(path):
+def read_positions(path, fields=FIELDS):
     """Stream only needed cells. Excel omits empty cells, so bind by column address."""
     rows = []
     with ZipFile(path) as archive:
@@ -95,7 +95,7 @@ def read_positions(path):
                 if node.tag != row_tag:
                     continue
                 header = node.get("r") == "1"
-                values = [None] * len(FIELDS)
+                values = [None] * len(fields)
                 for cell in node:
                     letter = cell.get("r").rstrip("0123456789")
                     if not header and letter not in columns:
@@ -104,17 +104,17 @@ def read_positions(path):
                     if raw is None:
                         continue
                     value = strings[int(raw)] if cell.get("t") == "s" else raw
-                    if header and value in FIELDS:
-                        columns[letter] = FIELDS.index(value)
+                    if header and value in fields:
+                        columns[letter] = fields.index(value)
                     elif not header:
                         values[columns[letter]] = value
                 if header:
-                    if len(columns) != len(FIELDS):
+                    if len(columns) != len(fields):
                         raise ValueError("missing required workbook headers")
                 else:
                     rows.append(values)
                 node.clear()
-    return pd.DataFrame(rows, columns=FIELDS)
+    return pd.DataFrame(rows, columns=fields)
 
 
 def order_positions(frame):

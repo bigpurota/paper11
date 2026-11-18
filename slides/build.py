@@ -8,6 +8,7 @@ import statistics
 import subprocess
 import tempfile
 from xml.etree import ElementTree as ET
+from xml.sax.saxutils import escape
 from zipfile import ZipFile
 
 
@@ -260,6 +261,43 @@ def local_trust_fields():
     return values
 
 
+def early_payment_fields():
+    dutch = read_table("early_dutch_episodes")
+    flags = {r["origin_month"] for r in dutch if r["six_month_below_both"] == "True"}
+    below = {r["origin_month"] for r in dutch if r["realized_below_both"] == "True"}
+    snapshot, = read_table("early_dutch_snapshot")
+    coverage, = read_table("early_czech_coverage")
+    direction = one(read_table("early_czech_direction"), method="six")
+    policy = matching(read_table("early_czech_policy"), good="0.1", bad="-0.45", reference="local")
+    change = one(policy, method="six")
+    values = {
+        "nl_books": str(len(dutch)), "nl_flags": str(len(flags)), "nl_hits": str(len(flags & below)),
+        "nl_false": str(len(flags - below)), "nl_missed": str(len(below - flags)),
+        "nl_six": percent(statistics.mean(float(r["six_month"]) for r in dutch)),
+        "nl_three": percent(statistics.mean(float(r["three_month"]) for r in dutch)),
+        "nl_young_year": percent(statistics.mean(float(r["revised_young_year_rate"]) for r in dutch)),
+        "nl_young_under": str(sum(float(r["six_month"]) < float(r["revised_young_year_rate"])
+                                  for r in dutch)),
+        "nl_paid": snapshot["positive_receipts"], "nl_snapshot_n": snapshot["issued"],
+        "nl_past_due": snapshot["at_least_30dpd"],
+        "cz_mark_n": coverage["test_early3"], "cz_mark_y": coverage["test_early3_events"],
+        "cz_already": coverage["already_short_by_month3"],
+        "cz_still_marked": coverage["marked_at_risk"], "cz_new_marked": coverage["incident_marked"],
+        "cz_still_unmarked": coverage["unmarked_at_risk"], "cz_new_unmarked": coverage["incident_unmarked"],
+        "cz_rest_n": str(int(coverage["scored_loans"]) - int(coverage["test_early3"])),
+        "cz_rest_y": str(int(coverage["test_events"]) - int(coverage["test_early3_events"])),
+        "cz_n": coverage["scored_loans"], "cz_books": coverage["scored_books"],
+        "cz_flags": direction["flags"], "cz_hits": direction["true_flags"],
+        "cz_below": direction["actual_below"], "cz_cut": percent(change["cutoff"]),
+        "cz_add": change["extra_books"], "cz_drop": change["dropped_books"],
+    }
+    scores = read_table("early_czech_metrics")
+    for method in ("local", "six", "other"):
+        values[f"cz_{method}_err"] = f"{float(one(scores, method=method)['brier']):.5f}"
+        values[f"cz_{method}_funded"] = one(policy, method=method)["funded"]
+    return values
+
+
 def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
@@ -274,6 +312,9 @@ def result_fields():
     fields.update(signal_fields())
     fields.update(frequency_fields())
     fields.update(local_trust_fields())
+    fields.update(early_payment_fields())
+    fields["talk_iv_loss"] = f"{float(fields['iv_loss']):.2f}"
+    fields["talk_iv_per"] = f"{float(fields['iv_per']):.2f}"
     for key, dataset in [("orig", "monedo"), ("tw", "taiwan"), ("pr", "prosper")]:
         for label, method in [("a", "accepts"), ("i", "ipw"), ("b", "bayes")]:
             fields[f"{key}_eval_{label}"] = number(one(comparison, table=2, method=method, metric="abr")[dataset])
@@ -355,7 +396,7 @@ def result_fields():
     return fields
 
 
-def image_paths(template):
+def image_paths(template, required):
     """Match a figure's slide alt text to its embedded media target."""
     assets = {}
     for slide in template.namelist():
@@ -372,17 +413,17 @@ def image_paths(template):
             target = next(r.get("Target") for r in rels if r.get("Id") == relid)
             item = posixpath.normpath(posixpath.join(directory, target)).lstrip("/")
             assets[item] = label
-    if set(assets.values()) != SOURCES:
+    if set(assets.values()) != required:
         raise ValueError("Missing figure alt text in slide template")
     return assets
 
 
-def refresh_pptx(target, fields):
+def refresh_pptx(target, fields, template, figures):
     def substitute(match):
-        return fields[match.group(1).decode()].encode("utf-8")
+        return escape(fields[match.group(1).decode()]).encode("utf-8")
 
-    with ZipFile(HERE / "template.pptx") as src, ZipFile(target, "w") as out:
-        assets = image_paths(src)
+    with ZipFile(template) as src, ZipFile(target, "w") as out:
+        assets = image_paths(src, figures)
         for item in src.infolist():
             payload = src.read(item)
             if item.filename in assets:
@@ -401,14 +442,16 @@ def main():
     # A private LibreOffice profile also works while a desktop session is open.
     with tempfile.TemporaryDirectory(dir=HERE) as work, tempfile.TemporaryDirectory() as profile:
         tmp = Path(work)
-        pptx = tmp / "paper11.pptx"
-        refresh_pptx(pptx, result_fields())
+        fields = result_fields()
+        talk, evidence = tmp / "paper11.pptx", tmp / "evidence.pptx"
+        refresh_pptx(talk, fields, HERE / "talk-template.pptx", {"simulation_fig2.png"})
+        refresh_pptx(evidence, fields, HERE / "template.pptx", SOURCES)
         subprocess.run([office, f"-env:UserInstallation={Path(profile).as_uri()}", "--headless",
-                        "--convert-to", "pdf", "--outdir", str(tmp), str(pptx)], check=True)
-        pdf = tmp / "paper11.pdf"
-        if not pdf.exists() or not pdf.stat().st_size:
-            raise RuntimeError("LibreOffice did not produce a PDF")
-        for output in (pptx, pdf):
+                        "--convert-to", "pdf", "--outdir", str(tmp), str(talk), str(evidence)], check=True)
+        outputs = (talk, talk.with_suffix(".pdf"), evidence, evidence.with_suffix(".pdf"))
+        if not all(p.is_file() and p.stat().st_size for p in outputs):
+            raise RuntimeError("LibreOffice did not produce both presentation PDFs")
+        for output in outputs:
             output.replace(HERE / output.name)
 
 

@@ -50,3 +50,7 @@ The frequency diagnosis is retrospective. The next chronological test used count
 ## Dutch history and US transfer
 
 The Dutch contract-mix explanation and reconstruction of the launch were prompted by the known forecast error. The externally fixed test uses a different product, geographic unit and outcome horizon. Wells Fargo state-quarter targets cover actual funded loans and three-year recorded charge-offs. The confirmation criterion compares the hybrid with both available alternatives, including the broader rate. Cutoffs and scenario returns describe replayed policies. [Dated test protocol](local-trust-protocol.md) · [External results and limits](local-trust-bank.md)
+
+## Payment signals and target definitions
+
+Bondora supplies dates of formal default and early payoff in separate vintages. The Dutch payment-and-arrears snapshot came after the eight forecasts. Czech transactions reconstruct cumulative instalment shortfall at monthly closes. Both applications share a forecasting rule, with different events and lead times. [Methods and limits](early-warning.md)

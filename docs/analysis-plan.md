@@ -34,3 +34,7 @@ The later frequency diagnosis uses only the earlier 48 published books. Before c
 ## Local credibility at a different lender
 
 The Dutch reconstruction is explanatory. The new test of the trust rule at Wells Fargo used one prespecified bank identifier, project states, the fiscal 2010–2019 approval release, and 19 calendar quarters. We published the local, outside-state, hybrid, hard and no-expansion comparisons, both decision cutoffs and the confirmation criterion before examining the new US targets. [Protocol commit](https://github.com/bigpurota/paper11/commit/99db60b) · [Results](local-trust-bank.md)
+
+## Early payment evidence
+
+We fixed the six-month conversion, the secondary three-month marker, the next external bank, two lending thresholds and paired calendar-block comparisons before reading Czech outcomes. The known eight Dutch books motivated the question. [Dated protocol](https://github.com/bigpurota/paper11/commit/e573d37)

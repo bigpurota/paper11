@@ -270,6 +270,12 @@ Across 828 supported state-quarters and 23,849 loans, the hybrid's mean Brier im
 
 [Decision condition and assumptions](../docs/local-trust.md) · [Wells Fargo methods, scenarios and results](../docs/local-trust-bank.md) · [Paired accuracy](local_trust_bank_metrics.csv) · [Economic scenarios](local_trust_bank_policy.csv)
 
+## Can early payments reveal that two historical risk estimates are high?
+
+Across eight Dutch dates the six-month default curve predicted 7.17%. Later first-25 portfolios realized 4.79% default exposure, while the very cohorts supplying the six-month counts eventually recorded 14.11% first-year defaults by count. The distinction matters because the later portfolios were issued thirteen months after the forecast. [Repayment clocks and sensitivity to archive revisions](../docs/early-dutch.md)
+
+In the prespecified Czech transfer, 11 loans had already reached the two-instalment event by month three. Among loans still at risk, 1/6 with a one-instalment shortfall at the landmark and 12/296 among the others had an incident event by month twelve. The six-month rule changed 16 of 143 simulated funding decisions versus the local rate at 18.18%. Scenario margin differences were +10,581 CZK relative to local and -212,788 CZK relative to the other regions. [External lender, uncertainty and case details](../docs/early-czech.md) · [Advance warning threshold](../docs/early-warning.md)
+
 ## Limits and a three-month follow-up
 
 We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.

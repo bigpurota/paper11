@@ -90,6 +90,28 @@ def pilot_cash_plot(out):
     plt.close(fig)
 
 
+def early_payment_section(out):
+    nl = pd.read_csv(out / "early_dutch_episodes.csv")
+    cz = pd.read_csv(out / "early_czech_coverage.csv").iloc[0]
+    action = pd.read_csv(out / "early_czech_policy.csv")
+    base = action.loc[action.method.eq("six") & action.good.eq(.10)].set_index("reference")
+    return [
+        "## Can early payments reveal that two historical risk estimates are high?",
+        f"Across eight Dutch dates the six-month default curve predicted {nl.six_month.mean():.2%}. "
+        f"Later first-25 portfolios realized {nl.target.mean():.2%} default exposure, while the very cohorts supplying the six-month counts "
+        f"eventually recorded {nl.revised_young_year_rate.mean():.2%} first-year defaults by count. "
+        "The distinction matters because the later portfolios were issued thirteen months after the forecast. "
+        "[Repayment clocks and sensitivity to archive revisions](../docs/early-dutch.md)",
+        f"In the prespecified Czech transfer, {cz.already_short_by_month3:.0f} loans had already reached the two-instalment event by month three. "
+        f"Among loans still at risk, {cz.incident_marked:.0f}/{cz.marked_at_risk:.0f} with a one-instalment shortfall at the landmark "
+        f"and {cz.incident_unmarked:.0f}/{cz.unmarked_at_risk:.0f} among the others had an incident event by month twelve. "
+        f"The six-month rule changed {base.loc['local','extra_books'] + base.loc['local','dropped_books']:.0f} of {cz.scored_books:.0f} simulated "
+        f"funding decisions versus the local rate at 18.18%. Scenario margin differences were {base.loc['local','delta_margin_czk']:+,.0f} CZK relative to local "
+        f"and {base.loc['other','delta_margin_czk']:+,.0f} CZK relative to the other regions. "
+        "[External lender, uncertainty and case details](../docs/early-czech.md) · [Advance warning threshold](../docs/early-warning.md)",
+    ]
+
+
 def trust_sections(out):
     dutch = pd.read_csv(out / "dutch_trust.csv")
     cases = pd.read_csv(out / "dutch_frequency_episodes.csv")
@@ -514,6 +536,7 @@ def write_report(out, comp):
         *signal_sections(out),
         *frequency_sections(out),
         *trust_sections(out),
+        *early_payment_section(out),
         "## Limits and a three-month follow-up",
         "We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.",
         "[Data provenance](../docs/sources.md) · [Implementation](../docs/algorithm.md) · [Deviations](../docs/deviations.md) · [Simulation](../docs/simulation.md)"

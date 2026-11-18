@@ -1,0 +1,9 @@
+good,bad,cutoff,method,baseline,books,lent,baseline_lent,new_lending,new_declines,changed_loans,changed_principal,scenario_difference
+0.1,-0.45,0.181818181818,six_month,local,8,7,0,7,0,175,336232,25329.2
+0.1,-0.45,0.181818181818,six_month,broader,8,7,8,0,1,25,65416,-4425.2
+0.1,-0.45,0.181818181818,three_month,local,8,0,0,0,0,0,0,0
+0.1,-0.45,0.181818181818,three_month,broader,8,0,8,0,8,200,401648,-29754.4
+0.03,-0.5,0.0566037735849,six_month,local,8,5,0,5,0,125,237952,-82.16
+0.03,-0.5,0.0566037735849,six_month,broader,8,5,0,5,0,125,237952,-82.16
+0.03,-0.5,0.0566037735849,three_month,local,8,0,0,0,0,0,0,0
+0.03,-0.5,0.0566037735849,three_month,broader,8,0,0,0,0,0,0,0

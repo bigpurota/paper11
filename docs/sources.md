@@ -14,3 +14,7 @@
 ## Local versus broader frequency at Wells Fargo
 
 The SBA's 30 September 2026 7(a) fiscal 2010–2019 approval CSV (255,300,948 bytes) supplies the previously unused test vintages. Its SHA-256 is `39aa32b71fb5dbb4bfb178c9b3d597c92bb6903622027c2f8360d13e57d0abb2`. The older two 7(a) extracts supply prior disbursement histories. We use FDIC certificate 3511, project state and eligible first disbursement dates. Only aggregate outputs are published. [Official SBA source](https://data.sba.gov/dataset/7a-504-foia) · [Wells Fargo FDIC entry](https://banks.data.fdic.gov/bankfind-suite/bankfind/details/3511) · [Timing and outcome definition](local-trust-protocol.md)
+
+## Dated instalments at an independent Czech bank
+
+The PKDD'99 Financial archive includes contractual monthly instalments and dated debit transactions tagged UVER. One anonymized bank contributed all accounts. Eight original relational files matched the researchers' archived distribution byte-for-byte. The pinned ZIP contains 18,152,358 bytes, SHA-256 `f0e784e20a9b242f6c1a010080fb1315a3968cf7266945335c836c94326286eb`. The public release contains regional counts and modeled margins. [University catalog](https://relational.fel.cvut.cz/dataset/Financial) · [Pinned distribution and dictionary](https://github.com/jlacko/berka-dataset/tree/77e9972a1ead107e5f42a91dd989d587bff055a4) · [Cash-flow reconstruction](early-czech.md)

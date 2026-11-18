@@ -41,6 +41,8 @@ all: setup
 	$(PY) -m paper11.dutch_frequency --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.dutch_trust --out "$(OUT)"
 	$(PY) -m paper11.local_trust_bank --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.early_dutch --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.early_czech --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) scripts/report.py --out "$(OUT)"
 	$(PY) scripts/verify.py --out "$(OUT)"
@@ -51,6 +53,7 @@ $(VENV)/.paper11-installed: requirements.txt requirements-lock.txt
 	$(PY) -m pip install --disable-pip-version-check -r requirements-lock.txt
 	@touch "$@"
 data: setup
+	$(PY) -c "from paper11.early_czech import fetch_archive; fetch_archive('$(CACHE)')"
 	$(PY) -c "from paper11.data import fetch, SOURCES; [fetch(s, '$(CACHE)') for s in SOURCES]"
 	$(PY) -c "from paper11.lender_pilot import fetch_bondora, fetch_bondora_followup; fetch_bondora('$(CACHE)'); fetch_bondora_followup('$(CACHE)')"
 	$(PY) -c "from paper11.pilot_holdout import fetch_holdout; fetch_holdout('$(CACHE)')"
@@ -86,6 +89,8 @@ extensions: setup
 	$(PY) -m paper11.dutch_frequency --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.dutch_trust --out "$(OUT)"
 	$(PY) -m paper11.local_trust_bank --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.early_dutch --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.early_czech --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 report: setup
 	$(PY) scripts/report.py --out "$(OUT)"

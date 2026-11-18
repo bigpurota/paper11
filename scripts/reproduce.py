@@ -41,6 +41,8 @@ def run(reference, cache):
                         ["-m","paper11.dutch_frequency","--cache",str(cache)],
                         ["-m","paper11.dutch_trust"],
                         ["-m","paper11.local_trust_bank","--cache",str(cache)],
+                        ["-m","paper11.early_dutch","--cache",str(cache)],
+                        ["-m","paper11.early_czech","--cache",str(cache)],
                         ["-m","paper11.rct","--cache",str(cache)],
                         ["scripts/report.py"], ["scripts/verify.py"]):
             subprocess.run([sys.executable,*command,"--out",tmp],env=env,check=True)

@@ -844,6 +844,65 @@ def verify_local_trust(out):
     print("PASS: Dutch vintage decomposition, donor trust, external bank scores, choices, dated block intervals and policy scenarios.")
 
 
+def verify_early_payments(out):
+    nl = pd.read_csv(out / "early_dutch_episodes.csv")
+    cz = pd.read_csv(out / "early_czech_episodes.csv")
+    legacy = pd.read_csv(out / "dutch_frequency_episodes.csv").set_index("origin_month").loc[nl.origin_month]
+    assert_allclose(nl.local, legacy.local_forecast)
+    assert_allclose(nl.broader, legacy.other_countries_forecast)
+    assert_allclose(nl.target, nl.future_default_principal / nl.future_principal)
+    assert_allclose(nl.revised_young_year_rate, nl.revised_young_year_defaults / nl.revised_young_labels)
+    assert (nl.young_mature_at_snapshot_e <= nl.young_mature_at_snapshot_y).all()
+    common = cz.rename(columns={"old_e6":"old_e", "bank_e6":"bank_e", "young6_e":"young_e", "young6_n":"young_n",
+                                "six":"six_month", "other":"broader"})
+    for data, key, six_end in [(nl, "origin_month", "six_month_to"), (common, "month", "early6_end")]:
+        assert pd.PeriodIndex(data[key], freq="M").shift(-7).equals(pd.PeriodIndex(data[six_end], freq="M"))
+        local_ok = data.old_y.ge(5) & data.old_e.ge(1)
+        bank_ok = data.bank_y.ge(5) & data.bank_e.ge(1)
+        h = np.where(local_ok, (data.old_e+.5)/(data.old_y+1), (data.bank_e+.5)/(data.bank_y+1))
+        h = np.where(local_ok | bank_ok, h, np.nan)
+        expected = (data.young_e + 10 * h * data.local) / ((data.young_n + 10) * h)
+        expected = np.where(np.isfinite(h) & data.young_n.gt(0), np.clip(expected, 0, 1), data.local)
+        assert_allclose(data.six_month, expected, atol=1e-11)
+        assert_allclose(data.capture, h, atol=1e-11, equal_nan=True)
+        # Independent algebraic condition given the two mature rates.
+        smaller = np.minimum(data.local, data.broader)
+        boundary = h*((10+data.young_n)*(smaller-1e-12) - 10*data.local)
+        assert np.array_equal(data.six_month.lt(smaller-1e-12), data.young_e.lt(boundary) & data.young_n.gt(0))
+
+    snapshot = pd.read_csv(out / "early_dutch_snapshot.csv").iloc[0]
+    assert pd.Timestamp(snapshot.snapshot_date) > pd.Period(nl.origin_month.max(), freq="M").start_time
+    assert snapshot.positive_receipts + snapshot.zero_receipts == snapshot.issued
+    assert snapshot.zero_cash_and_30dpd + snapshot.positive_cash_and_30dpd == snapshot.at_least_30dpd
+    coverage = pd.read_csv(out / "early_czech_coverage.csv").iloc[0]
+    assert (coverage.marked_at_risk + coverage.unmarked_at_risk + coverage.already_short_by_month3
+            == coverage.test_loans == cz.loans.sum())
+    assert (coverage.incident_marked + coverage.incident_unmarked + coverage.already_short_by_month3
+            == coverage.test_events == cz.events.sum())
+    truth = cz.events / cz.loans
+    metrics = pd.read_csv(out / "early_czech_metrics.csv").set_index("method")
+    for method in metrics.index:
+        error = truth*(1-cz[method])**2 + (1-truth)*cz[method]**2
+        assert_allclose(metrics.at[method, "brier"], error.mean(), atol=1e-11)
+    flags = pd.read_csv(out / "early_czech_direction.csv").set_index("method")
+    below = truth.lt(cz[["local", "other"]].min(axis=1) - 1e-12)
+    for method, record in flags.iterrows():
+        predicted = cz[method].lt(cz[["local", "other"]].min(axis=1) - 1e-12)
+        assert tuple(record[["true_flags","false_flags","missed","true_unflagged"]]) == (
+            (predicted & below).sum(), (predicted & ~below).sum(),
+            (~predicted & below).sum(), (~predicted & ~below).sum())
+    for dataset, ledger, principal, event_principal, reference, value in [
+        ("czech", cz, cz.principal, cz.event_principal, "reference", "delta_margin_czk"),
+        ("dutch", nl, nl.future_principal, nl.future_default_principal, "baseline", "scenario_difference"),
+    ]:
+        for row in pd.read_csv(out / f"early_{dataset}_policy.csv").to_dict("records"):
+            cutoff = row["good"] / (row["good"]-row["bad"])
+            switch = ledger[row["method"]].lt(cutoff).astype(int) - ledger[row[reference]].lt(cutoff).astype(int)
+            cash = row["bad"]*event_principal + row["good"]*(principal-event_principal)
+            assert_allclose(row[value], (switch*cash).sum(), atol=1e-6)
+    print("PASS: dated early-payment conversions, new-cohort targets, warning flags, landmark counts and lending decisions.")
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -895,12 +954,13 @@ def verify(out):
     verify_signal_study(out)
     verify_frequency_study(out)
     verify_local_trust(out)
+    verify_early_payments(out)
     print("PASS: locked cash contrasts, profile history, cross-lender signals, transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
 def compare_pilot_tables(out, reference):
     for family in ("information_value", "pilot_replay", "pilot_transfer", "lender_pilot", "pilot_targeting",
-                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper", "finnish_pilot", "frequency", "dutch_frequency", "local_trust_bank"):
+                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper", "finnish_pilot", "frequency", "dutch_frequency", "local_trust_bank", "early_dutch", "early_czech"):
         actual = {p.name for p in out.glob(f"{family}_*.csv")}
         expected = {p.name for p in reference.glob(f"{family}_*.csv")}
         if not expected or actual != expected:

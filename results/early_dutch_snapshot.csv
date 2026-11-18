@@ -1,0 +1,2 @@
+snapshot_date,age_min_days,age_max_days,issue_from,issue_to,first_due_from,first_due_to,issued,principal,first_payment_scheduled,positive_receipts,zero_receipts,at_least_30dpd,zero_cash_and_30dpd,positive_cash_and_30dpd,no_dpd_but_zero_due,overdue_amount_positive,revised_issued,revised_principal,revised_year_known,revised_year_events
+2024-05-24,60,89,2024-02-25,2024-03-25,2024-03-04,2024-04-26,821,2190448,821,817,4,5,4,1,793,23,828,2208128,828,56

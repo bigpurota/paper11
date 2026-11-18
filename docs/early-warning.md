@@ -8,6 +8,8 @@ Let h be the estimated share of year-one events that were already visible at six
 
 $$p=\frac{e/h+10L}{n+10}.$$
 
+Dividing by $h$ is the development-factor step of the chain-ladder method from loss reserving (Mack, 1993, *ASTIN Bulletin* 23(2)), applied to default counts; credit analysts draw the same curves as vintage or seasoning curves. The contribution here is the warning threshold and its external test, not the conversion itself.
+
 With positive support and interior benchmark rates, the warning that both histories overstate risk is equivalent to
 
 $$e<h\big[(n+10)\min(L,G)-10L\big].$$

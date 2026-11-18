@@ -10,7 +10,7 @@ $$
 Q_F-Q_W=u_F-u_W-k+\beta\left(E_Z V(\pi_Z)-V(\bar\pi)\right).
 $$
 
-Here $\pi_Z$ is the predictive belief at the next decision after the signal, and $\bar\pi$ is the predictive belief without that observation. The necessary and sufficient condition for strict preference for $F$ is that this **discounted expected value of sample information (EVSI)** exceeds $u_W-u_F+k$. At equality either action is optimal in the pair. If additional first actions exist, their values must also be compared. The identity applies to a risk-neutral monetary objective, or to a specified additively separable utility expressed on one scale.
+Here $\pi_Z$ is the predictive belief at the next decision after the signal, and $\bar\pi$ is the predictive belief without that observation. The necessary and sufficient condition for strict preference for $F$ is that this **discounted expected value of sample information (EVSI)** (Raiffa and Schlaifer, 1961, *Applied Statistical Decision Theory*; Howard, 1966, *IEEE Transactions on Systems Science and Cybernetics* 2(1)) exceeds $u_W-u_F+k$. At equality either action is optimal in the pair. If additional first actions exist, their values must also be compared. The identity applies to a risk-neutral monetary objective, or to a specified additively separable utility expressed on one scale.
 
 For arbitrary finite states, signals and actions, with prior $p_s$, signal likelihood $L_{zs}$ and continuation payoff $U_{as}$, the terminal EVSI is
 

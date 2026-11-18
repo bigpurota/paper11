@@ -10,7 +10,7 @@ $$E[\mathrm{Brier}(G)-\mathrm{Brier}(L)\mid\mathcal I]=(L-G)(2p-L-G).$$
 
 If L exceeds G, the local forecast is preferable when the expected risk exceeds their midpoint. The midpoint is known in advance; the expected future risk is exactly what needs estimating. A large historical sample by itself cannot settle which side the next cohort will fall on.
 
-One way to approximate that choice is to average the forecasts. In a simple model where the local estimate has unbiased sampling error with variance V, the local market deviates from the broad center by a mean-zero amount of variance T, and those errors are independent, the excess mean squared error of wL+(1−w)G is w²V+(1−w)²T. Minimizing it gives **w=T/(T+V)**. A majority local weight requires **T>V**. A broader estimate that is itself noisy, correlated markets or a common change in risk can invalidate that approximation.
+One way to approximate that choice is to average the forecasts. In a simple model where the local estimate has unbiased sampling error with variance V, the local market deviates from the broad center by a mean-zero amount of variance T, and those errors are independent, the excess mean squared error of wL+(1−w)G is w²V+(1−w)²T. Minimizing it gives **w=T/(T+V)**, the credibility weight of Bühlmann (1967, *ASTIN Bulletin* 4(3)) and the shrinkage factor of empirical Bayes (Efron and Morris, 1973, *JASA* 68(341)). A majority local weight requires **T>V**. A broader estimate that is itself noisy, correlated markets or a common change in risk can invalidate that approximation.
 
 ## The information the rule uses
 

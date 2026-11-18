@@ -280,7 +280,11 @@ def early_payment_fields():
     young_events = int(november["young_mature_at_snapshot_y"])
     mature_early, mature_year = int(november["old_e"]), int(november["old_y"])
     young_early = int(november["young_mature_at_snapshot_e"])
+    # Would an exact year-one rate for the measured young cohorts have warned on the same dates?
+    own = {r["origin_month"] for r in dutch
+           if float(r["revised_young_year_rate"]) < min(float(r["local"]), float(r["broader"]))}
     values = {
+        "nl_own_flags": str(len(own)), "nl_own_hits": str(len(own & below)),
         "nl_books": str(len(dutch)), "nl_flags": str(len(flags)), "nl_hits": str(len(flags & below)),
         "nl_false": str(len(flags - below)), "nl_missed": str(len(below - flags)),
         "nl_six": percent(statistics.mean(float(r["six_month"]) for r in dutch)),
@@ -368,6 +372,12 @@ def result_fields():
                                                         n_audited=50)["audit_rmse"])
         fields[f"{key}_audit_prior"] = number(one(audits, dataset=dataset, design="all_rejects",
                                                   n_audited=50)["prior_only_rmse"])
+    # Same-cohort ABR estimation error: the selection correction without any population transfer.
+    within = matching(read_table("evaluation"), metric="abr")
+    for key, dataset in [("tw", "taiwan"), ("pr", "prosper")]:
+        for label, method in [("a", "accepts"), ("b", "bayes")]:
+            errors = [float(r["within_cohort_error"]) for r in matching(within, dataset=dataset, method=method)]
+            fields[f"{key}_same_{label}"] = f"{100 * statistics.mean(e * e for e in errors) ** .5:.2f}"
     for label, method in [("a", "accepts"), ("b", "basl")]:
         row = one(training, dataset="prosper", method=method)
         fields[f"pr_auc_{label}"] = f"{float(row['auc']):.3f}"

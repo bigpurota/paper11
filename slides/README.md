@@ -33,7 +33,10 @@ The seminar's 15-minute format leaves room to expand the same ten slides. Spend 
 | Question | Short answer | Page |
 |---|---|---:|
 | Taiwan and Prosper loans were all funded. How can they test sampling bias? | We impose a known approval rule on pre-outcome features and hide the outcomes of the simulated rejects, so every estimate can be checked against the truth. | 12 |
-| Why did BASL raise defaults on Taiwan? | The simulated gain did not transfer. AUC is unchanged, pAUC falls and the ABR change of +0.16 pp [+0.02, +0.30] excludes zero. The paper's randomized holdout is private, so we cannot rerun its test. | 14 |
+| Why did BASL raise defaults on Taiwan? | Our simulated approval is soft: everyone had a 5–95% chance, so accepts cover almost the whole population and BASL's pseudo-labels mostly add noise. AUC is unchanged, pAUC falls and the ABR change of +0.16 pp [+0.02, +0.30] excludes zero. A hard-cutoff policy is the natural next test. | 14 |
+| Did Bayesian evaluation really help on Taiwan? | Not as a selection correction. On the same cohort, with no change of population, its error is 1.79 pp against 0.59 for accepted labels, because the logistic prior is weak on Taiwan. On Prosper the same check falls from 1.13 to 0.13 pp. | 13 |
+| Were the Dutch warnings skill or luck? | Partly luck. The conversion undershot the young cohorts it measured; with their exact year-one rate it would have warned on 4 dates, 3 correctly, instead of 7 and 6. The independent Czech test is weaker. | 26 |
+| Are these methods new? | The tools are standard: expected value of sample information, partial identification, odds-ratio sensitivity, credibility weighting and chain-ladder development. The contribution is applying them to lending decisions and testing them on dated data. | — |
 | Twenty seeds and forty batches are fewer than the paper's runs. | Intervals resample whole seeds, and the paper's 24.8% recovery lies inside our 21.2–37.3%. | 4 |
 | Isn't slide 6 obvious? | The new part is the minimum and the contrast. Four band totals identify all 50 differences; ten risk-decile totals identify none, and page 17 shows identical decile totals with opposite decisions. | 17 |
 | How many outcomes would settle the 30% versus 50% choice? | On Prosper 14.46 audited labels in expectation, but about 153 of 160 near break-even. | 18 |

@@ -528,6 +528,12 @@ def summary_section(out, sims, comp, contrast):
     czech = pd.read_csv(out / "early_czech_metrics.csv").set_index("method")
     switch = pd.read_csv(out / "early_czech_policy.csv").query("method == 'six' and reference == 'local' and good == 0.1")
     rec = sim.loc["basl_recovery_fraction"]
+    lower = dutch[["local", "broader"]].min(axis=1)
+    hits = int((dutch.six_month_below_both & dutch.realized_below_both).sum())
+    own_hits = int(((dutch.revised_young_year_rate < lower) & dutch.realized_below_both).sum())
+    within = pd.read_csv(out / "evaluation.csv").query("metric == 'abr'").copy()
+    within["squared"] = within.within_cohort_error ** 2
+    same = within.groupby(["dataset", "method"]).squared.mean().pow(.5)
 
     def interval(dataset, name):
         row = ci.loc[(dataset, name)]
@@ -545,7 +551,11 @@ def summary_section(out, sims, comp, contrast):
         f"but the paired changes, {interval('taiwan','bayes_minus_accepts_rmse_abr')} and {interval('prosper','bayes_minus_accepts_rmse_abr')}, "
         f"include zero. BASL changes ABR by {interval('taiwan','basl_minus_accepts_abr')} on Taiwan and "
         f"{interval('prosper','basl_minus_accepts_abr')} on Prosper. At 50% LGD every evaluator picks the same cutoff, "
-        "so the paper's profit gain does not appear here.",
+        "so the paper's profit gain does not appear here. Two cautions: our simulated approval gives every applicant a 5–95% "
+        "chance, so the accepted sample covers almost everyone and leaves BASL little to correct; and on the same Taiwan "
+        f"cohort, with no change of population, Bayesian evaluation is worse ({pp(same['taiwan','bayes'])} versus "
+        f"{pp(same['taiwan','accepts'])} pp) because its logistic prior is weak there, while on Prosper it improves "
+        f"({pp(same['prosper','accepts'])} → {pp(same['prosper','bayes'])} pp).",
         f"- **Which outcomes decide a policy.** Totals for the four bands between five cutoffs identify "
         f"{int(info.loc['expansion_bands','pairs_exact_at_actual_binary_totals'])} of {int(info.loc['expansion_bands','n_policy_pairs'])} "
         f"pairwise differences; totals for ten prior-risk deciles identify {int(info.loc['prior_deciles','pairs_exact_at_actual_binary_totals'])}.",
@@ -557,7 +567,9 @@ def summary_section(out, sims, comp, contrast):
         f"{dutch.target.mean():.2%} realized and histories of {dutch.local.mean():.2%} and {dutch.broader.mean():.2%}. At a "
         f"Czech bank the fixed rule changed {int(switch.extra_books.iloc[0] + switch.dropped_books.iloc[0])} of "
         f"{int(switch.books.iloc[0])} book decisions, but the other-region rate kept the lowest Brier loss "
-        f"({czech.loc['other','brier']:.4f} versus {czech.loc['six','brier']:.4f}).",
+        f"({czech.loc['other','brier']:.4f} versus {czech.loc['six','brier']:.4f}). Of the {hits} correct Dutch warnings, "
+        f"{hits - own_hits} disappear if the young cohorts' own year-one rate replaces the six-month conversion, so the "
+        "conversion's undershoot did part of the work.",
         "Outcomes on Taiwan and Prosper come from funded loans with simulated selection; the Monedo randomized holdout "
         "is private. Extension samples are small, and the sections below give each design and its uncertainty.",
     ]

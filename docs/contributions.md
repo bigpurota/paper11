@@ -22,6 +22,20 @@ The reference point is the assigned July 2024 preprint, including its online app
 
 The methods are original implementations and applications relative to this assignment. Random assignment in the Philippines was carried out by other researchers. Established devices such as bounds, bootstrapping, random sampling and portfolio accounting are credited as methods. We claim the comparisons, calculations and empirical conclusions for this replication.
 
+## Established methods behind the extensions
+
+Several extensions apply standard tools to the lending problem. The contribution is the application, the decision quantities and the empirical tests.
+
+| Extension | Established method | Reference |
+|---|---|---|
+| Value of one pilot loan | Expected value of sample information | Raiffa and Schlaifer (1961), *Applied Statistical Decision Theory*; Howard (1966), *IEEE Transactions on Systems Science and Cybernetics* 2(1) |
+| Totals that identify policy differences | Estimability of linear functions through the row space | Linear algebra; [Strang](policy-information.md) |
+| Identical totals, opposite decisions; policy bounds | Partial identification and minimax regret | Manski, cited in [identification](identification.md) and [bounds](bounds.md) |
+| Reject-odds multiplier Γ | Odds-ratio sensitivity models | Rosenbaum (2002), *Observational Studies*; Tan (2006), *JASA* 101(476) |
+| Local versus broader rate, w = T/(T+V) | Credibility weighting and empirical-Bayes shrinkage | Bühlmann (1967), *ASTIN Bulletin* 4(3); Efron and Morris (1973), *JASA* 68(341) |
+| Six-month to year-one conversion | Development factors in chain-ladder reserving; vintage curves | Mack (1993), *ASTIN Bulletin* 23(2) |
+| Philippine offers | Randomized credit scoring | Karlan and Zinman (2011), *Science*; [analytic file](rct.md) |
+
 ## How the previous team project compares
 
 | Strength of Paper 15 | Counterpart in Paper 11 | Remaining limitation |

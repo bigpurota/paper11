@@ -8,13 +8,13 @@ This report uses the assigned preprint and public borrower records. An approval 
 
 - **Simulation.** Bayesian evaluation cuts the error in estimating ABR from 24.33 to 7.71 pp (paper: 20.10 to 9.29). BASL recovers 29.6% of the gap to full-label training (95% interval 21.2% to 37.3%; paper 24.8%).
 
-- **Public cohorts.** Bayesian evaluation lowers the ABR estimation error on Taiwan (1.43 → 1.35 pp) and Prosper (1.35 → 0.35 pp), but the paired changes, −0.08 pp [−0.95, +0.78] and −1.00 pp [−1.33, +0.53], include zero. BASL changes ABR by +0.16 pp [+0.02, +0.30] on Taiwan and +0.01 pp [−0.22, +0.26] on Prosper. At 50% LGD every evaluator picks the same cutoff, so the paper's profit gain does not appear here.
+- **Public cohorts.** Bayesian evaluation lowers the ABR estimation error on Taiwan (1.43 → 1.35 pp) and Prosper (1.35 → 0.35 pp), but the paired changes, −0.08 pp [−0.95, +0.78] and −1.00 pp [−1.33, +0.53], include zero. BASL changes ABR by +0.16 pp [+0.02, +0.30] on Taiwan and +0.01 pp [−0.22, +0.26] on Prosper. At 50% LGD every evaluator picks the same cutoff, so the paper's profit gain does not appear here. Two cautions: our simulated approval gives every applicant a 5–95% chance, so the accepted sample covers almost everyone and leaves BASL little to correct; and on the same Taiwan cohort, with no change of population, Bayesian evaluation is worse (1.79 versus 0.59 pp) because its logistic prior is weak there, while on Prosper it improves (1.13 → 0.13 pp).
 
 - **Which outcomes decide a policy.** Totals for the four bands between five cutoffs identify 50 of 50 pairwise differences; totals for ten prior-risk deciles identify 0.
 
 - **Lending to learn.** In the illustrative model a pilot of principal 100 loses 1.41; with persistent risk its outcome pays back after 3 later loans, and with a 10% chance of a reset per loan the total value is capped at 0.71. In later Bondora loans the frozen selector missed the only recovery.
 
-- **Early defaults.** On eight Dutch dates the six-month forecast averaged 7.17% against 4.79% realized and histories of 27.19% and 13.36%. At a Czech bank the fixed rule changed 16 of 143 book decisions, but the other-region rate kept the lowest Brier loss (0.0811 versus 0.0852).
+- **Early defaults.** On eight Dutch dates the six-month forecast averaged 7.17% against 4.79% realized and histories of 27.19% and 13.36%. At a Czech bank the fixed rule changed 16 of 143 book decisions, but the other-region rate kept the lowest Brier loss (0.0811 versus 0.0852). Of the 6 correct Dutch warnings, 3 disappear if the young cohorts' own year-one rate replaces the six-month conversion, so the conversion's undershoot did part of the work.
 
 Outcomes on Taiwan and Prosper come from funded loans with simulated selection; the Monedo randomized holdout is private. Extension samples are small, and the sections below give each design and its uncertainty.
 

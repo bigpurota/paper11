@@ -6,7 +6,9 @@ Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fo
 
 A bank learns how people repay the loans it approves. How well can it then score *all* applicants? We implement the training and evaluation methods in Kozodoi et al., compare them with the assigned paper, and ask when issuing a loan to observe its outcome can pay for itself. [Assigned paper and appendix](https://arxiv.org/abs/2407.13009v1) · [Journal article](https://www.sciencedirect.com/science/article/pii/S0377221725000839)
 
-[Presentation (PDF)](slides/paper11.pdf) · [Editable slides and speaker notes](slides/paper11.pptx) · [Evidence slides](slides/evidence.pdf) · [Research report](results/report.md) · [Team contributions and assessment](docs/contributions.md)
+[Defense PowerPoint with clickable Q&A](slides/paper11.pptx) · [Projection PDF](slides/paper11.pdf) · [Full evidence reference](slides/evidence.pdf) · [Research report](results/report.md) · [Team contributions and assessment](docs/contributions.md)
+
+The first nine slides cover the talk in about 9½ minutes. At the end, open **slide 10** to jump to any of the sixteen backup pages and return to the menu with one click.
 
 ## Replicating the paper
 

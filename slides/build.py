@@ -10,6 +10,7 @@ import tempfile
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 from zipfile import ZipFile
+from defense import assemble
 
 
 HERE = Path(__file__).resolve().parent
@@ -270,6 +271,10 @@ def early_payment_fields():
     direction = one(read_table("early_czech_direction"), method="six")
     policy = matching(read_table("early_czech_policy"), good="0.1", bad="-0.45", reference="local")
     change = one(policy, method="six")
+    november = one(dutch, origin_month="2023-11")
+    young_events = int(november["young_mature_at_snapshot_y"])
+    mature_early, mature_year = int(november["old_e"]), int(november["old_y"])
+    young_early = int(november["young_mature_at_snapshot_e"])
     values = {
         "nl_books": str(len(dutch)), "nl_flags": str(len(flags)), "nl_hits": str(len(flags & below)),
         "nl_false": str(len(flags - below)), "nl_missed": str(len(below - flags)),
@@ -290,7 +295,17 @@ def early_payment_fields():
         "cz_flags": direction["flags"], "cz_hits": direction["true_flags"],
         "cz_below": direction["actual_below"], "cz_cut": percent(change["cutoff"]),
         "cz_add": change["extra_books"], "cz_drop": change["dropped_books"],
+        "nl_old_capture_n": f"{mature_early} / {mature_year}",
+        "nl_young_capture_n": f"{young_early} / {young_events}",
+        "nl_old_capture_share": f"{mature_early / mature_year:.1%}",
+        "nl_young_capture_share": f"{young_early / young_events:.1%}",
+        "nl_nov_forecast": percent(november["six_month"]),
+        "nl_nov_actual": percent(young_events / int(november["young_mature_at_snapshot"])),
     }
+    for baseline in ("local", "other"):
+        row = one(read_table("early_czech_policy"), method="six", reference=baseline, good="0.1", bad="-0.45")
+        values[f"cz_{baseline}_switch"] = row["extra_books"]+" / "+row["dropped_books"]
+        values[f"cz_{baseline}_money"] = f"{float(row['delta_margin_czk']):+,.0f}".replace("-", "−")
     scores = read_table("early_czech_metrics")
     for method in ("local", "six", "other"):
         values[f"cz_{method}_err"] = f"{float(one(scores, method=method)['brier']):.5f}"
@@ -443,14 +458,16 @@ def main():
     with tempfile.TemporaryDirectory(dir=HERE) as work, tempfile.TemporaryDirectory() as profile:
         tmp = Path(work)
         fields = result_fields()
-        talk, evidence = tmp / "paper11.pptx", tmp / "evidence.pptx"
+        talk, evidence, defense = tmp / "talk.pptx", tmp / "evidence.pptx", tmp / "paper11.pptx"
         refresh_pptx(talk, fields, HERE / "talk-template.pptx", {"simulation_fig2.png"})
         refresh_pptx(evidence, fields, HERE / "template.pptx", SOURCES)
+        assemble(talk, evidence, defense, fields)
         subprocess.run([office, f"-env:UserInstallation={Path(profile).as_uri()}", "--headless",
-                        "--convert-to", "pdf", "--outdir", str(tmp), str(talk), str(evidence)], check=True)
-        outputs = (talk, talk.with_suffix(".pdf"), evidence, evidence.with_suffix(".pdf"))
+                        "--convert-to", "pdf", "--outdir", str(tmp), str(talk), str(evidence), str(defense)], check=True)
+        outputs = (defense, defense.with_suffix(".pdf"), talk.with_suffix(".pdf"),
+                   evidence, evidence.with_suffix(".pdf"))
         if not all(p.is_file() and p.stat().st_size for p in outputs):
-            raise RuntimeError("LibreOffice did not produce both presentation PDFs")
+            raise RuntimeError("LibreOffice did not produce all presentation PDFs")
         for output in outputs:
             output.replace(HERE / output.name)
 

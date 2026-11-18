@@ -35,4 +35,4 @@ The [previous team project](https://github.com/bigpurota/paper15-lou-shu) used k
 
 ## Verified release run
 
-On 18 November 2026 the test suite passed 108 regression and reference cases. The release uses eight source files totaling 729,853,869 bytes. An independent calculation using the cached files reproduced all 60 submitted research artifacts byte for byte. The editable PowerPoint was rebuilt from its source template and checked against the delivered PPTX and the rendered images of all 30 PDF pages. [Reproduction commands](../README.md#reproduce)
+On 18 November 2026 the test suite passed 108 regression and reference cases. The release uses eight source files totaling 729,853,869 bytes. A new environment downloaded all eight files into an empty cache and reproduced all 60 submitted research artifacts byte for byte. A separate calculation using the cached files also reproduced all 60. The editable PowerPoint was rebuilt from its source template and checked against the delivered PPTX and the rendered images of all 30 PDF pages. [Reproduction commands](../README.md#reproduce)

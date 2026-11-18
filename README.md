@@ -23,6 +23,12 @@ The simulation supports the paper's main mechanism. The empirical evidence is mi
 
 ## What did we add?
 
+### What does the lender need to learn?
+
+Suppose a bank can approve the lowest-risk 30%, 35%, 40%, 45% or 50% of applicants. Ask for the **total expected net margin in each of the four bands between consecutive cutoffs**. Adding those four numbers in the appropriate combinations gives the dollar difference between every pair of policies. The margin on the borrowers all five policies accept cancels. Under fixed terms and additive payoffs, the result holds for any scorecard and any distribution of applicant risk. When each band contains an unknown expected margin that can vary independently, four independent linear measurements are also necessary to recover *every exact difference*. Choosing a winner can take less information. In a separate retrospective check, the four realized band totals recover all 50 pairwise margins across five validation samples. Ten true default counts grouped by the model’s predicted risk settle the sign in one comparison and recover zero exact margins. [General result, proof and numerical checks](docs/policy-information.md)
+
+To learn one of those margins, the bank might have to lend to someone it would ordinarily turn away. A finite-horizon lending model calculates when paying for a repayment observation can change enough future decisions to cover today's expected loss. In the illustrative model, the first 100-unit loan loses 1.41 in expectation. If the regime persists, one or two remaining applications do not justify the initial loan. With three, the option to change the next decision after repayment raises total expected margin to +0.79. If the risk regime is independently redrawn for each borrower, that same feedback has zero value for future decisions. [Learning by lending](docs/exploration.md)
+
 ### Which missing outcomes would change the bank's decision?
 
 Take the first Taiwan validation split. A 30% to 50% expansion would add 1,200 borrowers. At 10% interest and 50% loss given default, the expansion earns a positive incremental margin if **at most 218 of the 1,200 default**. Consider two completions of the archive. They agree on every observed repayment and on the same 699 hidden defaults, with the true count preserved in each of ten groups ranked by predicted risk. Allocating those defaults differently *within* groups produces **120** versus **315** defaults among the extra approvals. The very same group totals support **+0.900** and **−0.888** percentage points of scenario margin per applicant. Only the ten retrospective totals are disclosed in this thought experiment. Individual hidden repayments stay unknown. In the Prosper cohort, knowing its ten true counts does establish a positive margin (range **+0.195 to +1.468 pp**). The project also compares five policies under minimax regret. [Constructed worlds and proof](docs/identification.md)
@@ -67,6 +73,7 @@ make reproduce    # second run in an empty output directory; compare every resea
 |---|---|
 | [Methods](src/paper11/methods.py) | BASL, Monte Carlo Bayesian evaluation, weighted metrics, tail ties, baselines |
 | [Empirical pipeline](src/paper11/empirical.py) | Honest splits, threshold selection, paired intervals and calibration |
+| [Policy information](src/paper11/policy_information.py) · [Dynamic exploration](src/paper11/exploration.py) | Minimum linear information for exact policy comparisons and the value of learning through lending |
 | [Policy identification](src/paper11/identification.py) · [Sequential decision audit](src/paper11/decision_audit.py) | Indistinguishable outcomes, minimax regret and exact stopping probabilities |
 | [Quarterly forecasts](src/paper11/vintages.py) · [Policy bounds](src/paper11/bounds.py) · [Field experiment](src/paper11/rct.py) | Time transfer, partial identification and observed offer outcomes |
 | [Audit design](src/paper11/audit_design.py) | Randomized audits with equal numbers of labels and residual correction |

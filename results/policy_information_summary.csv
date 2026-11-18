@@ -1,0 +1,11 @@
+dataset,fold,design,n_validation,n_hidden,n_policy_pairs,reported_sums,measurement_rank,contrast_rank,additional_independent_sums,pairs_identified_for_all_expected_margins,pairs_exact_at_actual_binary_totals,decisions_settled_at_actual_binary_totals
+taiwan,1,prior_deciles,6000,2175,10,10,10,4,4,0,0,0
+taiwan,1,expansion_bands,6000,2175,10,4,4,4,0,10,10,10
+taiwan,2,prior_deciles,6000,2267,10,10,10,4,4,0,0,0
+taiwan,2,expansion_bands,6000,2267,10,4,4,4,0,10,10,10
+taiwan,3,prior_deciles,6000,2138,10,10,10,4,4,0,0,0
+taiwan,3,expansion_bands,6000,2138,10,4,4,4,0,10,10,10
+taiwan,4,prior_deciles,6000,2183,10,10,10,4,4,0,0,0
+taiwan,4,expansion_bands,6000,2183,10,4,4,4,0,10,10,10
+prosper,1,prior_deciles,2895,875,10,10,10,4,4,0,0,1
+prosper,1,expansion_bands,2895,875,10,4,4,4,0,10,10,10

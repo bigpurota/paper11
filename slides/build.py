@@ -91,6 +91,21 @@ def decision_fields():
         fields[f"audit_{prefix}_k"] = row["hidden_defaults"]
         fields[f"audit_{prefix}_n"] = f"{float(row['mean_labels']):.2f}"
     fields["audit_hidden"] = one(audit, scenario="retrospective_truth")["hidden"]
+    info = read_table("policy_information_summary")
+    aligned = matching(info, design="expansion_bands")
+    model_bins = matching(info, design="prior_deciles")
+    fields["pi_pairs"] = str(sum(int(r["n_policy_pairs"]) for r in aligned))
+    for name, rows in (("pi_exact", aligned), ("pi_prior", model_bins)):
+        fields[name] = str(sum(int(r["pairs_exact_at_actual_binary_totals"]) for r in rows))
+    experiment = matching(read_table("exploration_values"), reset=0)
+    initial = one(experiment, horizon=1)
+    fields.update(ex_prior=percent(initial["prior_good"]).replace(".00", ""),
+                  ex_good=percent(initial["default_good"]).replace(".00", ""),
+                  ex_bad=percent(initial["default_bad"]).replace(".00", ""),
+                  ex_loss=f"{-100 * float(initial['immediate_margin']):.2f}")
+    for h in (3, 10):
+        row = one(experiment, horizon=h)
+        fields[f"ex_h{h}"] = f"{100 * float(row['adaptive_value']):.2f}"
     return fields
 
 

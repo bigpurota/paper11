@@ -100,6 +100,46 @@ def verify_identification_and_audit(out):
         assert row.p_wrong <= .05 + 1e-10
 
 
+
+def verify_information_and_learning(out):
+    pairs = pd.read_csv(out / "policy_information_pairs.csv")
+    summaries = pd.read_csv(out / "policy_information_summary.csv")
+    assert len(pairs) == 100 and len(summaries) == 10
+    for row in summaries.itertuples():
+        same = (pairs.dataset == row.dataset) & (pairs.fold == row.fold) & (pairs.design == row.design)
+        sub = pairs.loc[same]
+        assert len(sub) == row.n_policy_pairs
+        assert sub.exact_at_actual_binary_totals.sum() == row.pairs_exact_at_actual_binary_totals
+        assert sub.identified_for_all_expected_margins.sum() == row.pairs_identified_for_all_expected_margins
+        assert sub.decision_at_actual_binary_totals.ne("undetermined").sum() == row.decisions_settled_at_actual_binary_totals
+        assert (sub.fully_observed_gain >= sub.lower_gain - 1e-9).all()
+        assert (sub.fully_observed_gain <= sub.upper_gain + 1e-9).all()
+    aligned = pairs[pairs.design == "expansion_bands"]
+    assert_allclose(aligned.lower_gain, aligned.upper_gain, atol=1e-9)
+    # Consecutive policy gains must add up to every wider expansion on the same fold.
+    for _, cohort in aligned.groupby(["dataset", "fold"]):
+        target = sorted(set(cohort.from_target) | set(cohort.to_target))
+        gains = cohort.set_index(["from_target", "to_target"]).fully_observed_gain
+        prefix = np.r_[0., np.cumsum([gains.loc[(l,r)] for l,r in zip(target, target[1:])])]
+        for (l,r), gain in gains.items():
+            assert_allclose(gain, prefix[target.index(r)] - prefix[target.index(l)], atol=1e-9)
+
+    policies = pd.read_csv(out / "exploration_values.csv").set_index(["reset", "horizon"]).sort_index()
+    branches = pd.read_csv(out / "exploration_branches.csv")
+    assert len(policies) == 80 and len(branches) == 2 * len(policies)
+    resets = ["reset", "horizon"]
+    assert_allclose(branches.groupby(resets).outcome_probability.sum(), 1., atol=1e-10)
+    continuation = (branches.outcome_probability * branches.next_value).groupby(
+        [branches.reset, branches.horizon]).sum()
+    assert_allclose(policies.fund_value, policies.immediate_margin + continuation, atol=1e-10)
+    assert_allclose(policies.adaptive_value, policies[["fund_value", "wait_value", "stop_value"]].max(axis=1))
+    assert_allclose(policies.first_signal_value, continuation - policies.wait_value, atol=1e-10)
+    assert (policies.adaptive_value <= policies.current_regime_oracle + 1e-9).all()
+    assert (policies.adaptive_value >= policies.best_fixed - 1e-9).all()
+    assert_allclose(policies.loc[1.].first_signal_value, 0., atol=1e-10)
+    assert (out / "exploration_value.png").read_bytes().startswith(bytes.fromhex("89504e470d0a1a0a"))
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -144,7 +184,8 @@ def verify(out):
         assert_allclose(diff.loc[(ds,"basl_minus_accepts_abr"),"estimate"],delta,atol=1e-9)
     verify_extensions(out)
     verify_identification_and_audit(out)
-    print("PASS: equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
+    verify_information_and_learning(out)
+    print("PASS: information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
 if __name__ == "__main__":

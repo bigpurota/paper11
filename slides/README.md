@@ -1,6 +1,6 @@
 # Paper 11 presentation
 
-Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–25 are for questions.
+Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–26 are for questions.
 
 ## Fifteen-minute speaking plan
 
@@ -13,13 +13,13 @@ Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has e
 | 3:40–5:00 | 5. Simulation against Figure 2 on identical axes |
 | 5:00–6:05 | 6. Evaluation RMSE against Table 2 |
 | 6:05–7:10 | 7. Training ABR against Table 3 |
-| 7:10–7:50 | 8. What must a lender learn before expanding from 30% to 50%? |
+| 7:10–7:50 | 8. Which repayments matter for the choice of cutoff? |
 | 7:50–9:20 | 9. Twelve prospective Prosper forecasts |
-| 9:20–10:40 | 10. Prior-odds tipping bound for a policy expansion |
+| 9:20–10:40 | 10. Four adjacent-band margins recover every difference between five cutoffs |
 | 10:40–12:05 | 11. Random assignment of credit offers in the Philippines |
 | 12:05–13:00 | 12. Two Taiwan histories match the same ten actual default counts and imply opposite decisions |
 | 13:00–13:55 | 13. Overfitting checks and limits |
-| 13:55–15:00 | 14. How many randomly audited repayments settle the Prosper decision? |
+| 13:55–15:00 | 14. When does a loss-making test loan pay for itself? |
 
 | Backup slide | Question or evidence |
 |---|---|
@@ -28,6 +28,7 @@ Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has e
 | 23 | Sources and reproduction commands |
 | 24 | Scenario margins from the validation-selected loan cutoff |
 | 25 | Worst-case regret for five fixed or randomized approval cutoffs |
+| 26 | Expected audit size for the Prosper expansion and two break-even cases |
 
 ## Updating the deck
 
@@ -35,4 +36,6 @@ From the repository root, run the analytical pipeline first, then run `python3 s
 
 [template.pptx](template.pptx) is the editable source. Native table cells and figures are linked to the results by the public [build script](build.py). Keep each double-braced field in one PowerPoint text run when editing a dynamic cell, and retain the figure alt text (`simulation_fig2.png`, `calibration.png`, `vintage_forecasts.png`, `bounds_frontier.png`). As well as updating the numbers, review the explanatory sentences when running a different experiment.
 
-Slide 12 uses the two-cutoff rows marked `oracle_decile_totals` in [witness worlds](../results/identification_worlds.csv) and [policy summaries](../results/identification_summary.csv). The group counts are disclosed retrospectively. Slide 14 takes the three Prosper sample-size expectations from [decision audit results](../results/decision_audit_summary.csv). Slide 25 uses the five-cutoff, unrestricted rows in the policy summaries.
+Slide 12 uses the two-cutoff rows marked `oracle_decile_totals` in [witness worlds](../results/identification_worlds.csv) and [policy summaries](../results/identification_summary.csv). The group counts are disclosed retrospectively. Slide 26 takes the three Prosper sample-size expectations from [decision audit results](../results/decision_audit_summary.csv). Slide 25 uses the five-cutoff, unrestricted rows in the policy summaries.
+
+Slide 10 uses an illustrative four-band example and checks the aggregate counts in [policy information](../results/policy_information_summary.csv). Slide 14 scales the [dynamic lending model](../results/exploration_values.csv) to loans of 100 units of principal. The hidden risk regime is shared in the displayed scenario.

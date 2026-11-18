@@ -117,6 +117,23 @@ For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded out
 
 ## Our extensions
 
+### Which measurements recover every policy difference?
+
+Consider five nested policies, with four nonempty groups entering between consecutive cutoffs. Their four unknown expected margins suffice for every exact pairwise comparison. When those margins can vary on an open set, four is the minimum number of independent linear measurements for that task. The sign alone can sometimes be learned with fewer. For general lending rules, the answer is the rank of the matrix of differences on the unknown margins.
+
+| design | n_policy_pairs | pairs_exact_at_actual_binary_totals | decisions_settled_at_actual_binary_totals |
+|---|---|---|---|
+| expansion_bands | 50 | 50 | 50 |
+| prior_deciles | 50 | 0 | 1 |
+
+The rows above use the actual aggregate counts of masked outcomes, disclosed retrospectively on each validation split. Counts are comparisons across four Taiwan splits and one Prosper split. [Data-independent proof and finite-cohort check](../docs/policy-information.md)
+
+### When can a lender pay to observe a repayment?
+
+In the illustrative persistent-regime decision model, a loan of 100 has immediate expected margin -1.41. Starting with 3 applicants available, the lender first finds funding worthwhile: its optimal total expected margin is 0.79, versus zero under the best fixed decision. At ten opportunities the total reaches 19.37. If each new borrower draws an independent regime, a repayment has zero value for the next decision. The horizon is measured in decisions made after observing the preceding repayment. These are illustrative monetary units, independent of the public datasets. [Decision tree, assumptions and tests](../docs/exploration.md)
+
+![Expected value of lending to learn](exploration_value.png)
+
 ### Can the archive identify which policy earns more?
 
 Hold all visible outcomes fixed. Grant access to the actual number of defaults in each of ten groups of hidden applicants ranked by the frozen prior. The grouping is fixed before reading the true aggregate counts. On Taiwan, moving these same defaults within groups yields both negative and positive gains for the same 30% to 50% expansion in every split. The mean bounds are -0.82 to +0.99 pp of scenario margin per applicant. On Prosper these ten true counts are sufficient to determine a positive sign (+0.20 to +1.47 pp). These aggregates use retrospective information unavailable to the original lender. A second sensitivity case substitutes counts obtained by rounding the prior probabilities. We also solve the minimax-regret choice among five cutoffs and audit the frozen rule on holdout. [Construction, proof and results](../docs/identification.md)

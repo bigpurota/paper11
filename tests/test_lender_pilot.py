@@ -63,3 +63,44 @@ def test_later_ledger_preserves_identical_borrowers_and_missing_counterfactuals(
     panel["action_changed"] = False
     same_action = lender.rescore_later(loans,panel).iloc[0]
     assert same_action.scorable and same_action.euro_net == pytest.approx(-20.)
+
+
+def test_repackaged_archive_must_contain_exactly_the_pinned_csv(tmp_path):
+    from hashlib import sha256
+    from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile
+
+    contents = b"principal,payments\n100,95\n"
+    expected = sha256(contents).hexdigest()
+    for method in [ZIP_STORED, ZIP_DEFLATED]:
+        archive = tmp_path / f"tape-{method}.zip"
+        with ZipFile(archive, "w", compression=method) as file:
+            file.writestr("loans.csv", contents)
+        assert lender._same_csv(archive, "loans.csv", len(contents), expected)
+        assert not lender._same_csv(archive, "loans.csv", len(contents), "wrong digest")
+        with ZipFile(archive, "a") as file:
+            file.writestr("extra.csv", b"")
+        assert not lender._same_csv(archive, "loans.csv", len(contents), expected)
+
+
+def test_failed_first_route_is_replaced_only_by_verified_second_download(tmp_path, monkeypatch):
+    from hashlib import sha256
+    from io import BytesIO
+
+    from paper11 import data
+
+    seen = []
+    real = b"published data"
+    expected = sha256(real).hexdigest()
+    first, second = "https://one.example/file", "https://two.example/file"
+
+    def open_route(request, timeout):
+        seen.append(request.full_url)
+        return BytesIO(real if request.full_url == second else b"<html>Service temporarily unavailable</html>")
+
+    monkeypatch.setattr(data, "urlopen", open_route)
+    destination = tmp_path / "tape"
+    assert data.fetch_pinned(first, expected, destination, alternates=(second,)).read_bytes() == real
+    assert seen == [first, second]
+    with pytest.raises(ValueError, match="fingerprint"):
+        data.fetch_pinned(first, "wrong", destination, alternates=(second,))
+    assert destination.read_bytes() == real and list(tmp_path.iterdir()) == [destination]

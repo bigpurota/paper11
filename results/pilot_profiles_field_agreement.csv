@@ -1,0 +1,10 @@
+field,loans,compared,discordant,missing_in_one
+LoanDate,347,347,0,0
+Country,347,347,0,0
+NewCreditCustomer,347,347,0,0
+Amount,347,347,0,0
+AppliedAmount,347,347,0,0
+MaturityDate_Original,347,347,0,0
+Interest,347,347,0,0
+NoOfPreviousLoansBeforeLoan,347,347,0,0
+AmountOfPreviousLoansBeforeLoan,347,347,0,0

@@ -165,6 +165,23 @@ def transfer_fields():
     fields["x_cut"] = percent(float(origin["repay_margin"]) / (float(origin["repay_margin"]) - float(origin["default_margin"])))
     for label, column in (("loss","euro_pilot"), ("avoid","euro_gross"), ("net","euro_net")):
         fields["x_"+label] = f"{abs(float(late[column])):,.2f}"
+    profiles = read_table("pilot_profiles_selected")
+    for key, origin in [("jul", "2018-07"), ("oct", "2018-10"), ("nov", "2018-11"), ("feb", "2019-02")]:
+        row = one(profiles, country="EE", customer="returning", pilot_month=origin)
+        fields[f"p_{key}_amt"] = f"€{float(row['principal']):,.0f} · {float(row['principal_to_recent_median']):.2f}×"
+        fields[f"p_{key}_prev"] = row["previous_loans"]
+        fields[f"p_{key}_term"] = f"{row['original_term_calendar_months']} mo"
+        value = float(row["euro_net"])
+        fields[f"p_{key}_gain"] = ("+" if value >= 0 else "−") + f"€{abs(value):,.0f}"
+    holdouts = read_table("pilot_rule_summary")
+    for cohort, unit in [("primary", "€"), ("seasoned", "€"), ("prosper", "$")]:
+        row = one(holdouts, cohort=cohort)
+        fields[f"h_{cohort}_n"] = row["eligible"]
+        fields[f"h_{cohort}_s"] = row["selected"]
+        fields[f"h_{cohort}_hit"] = f"{row['new_cash_tp']} / {row['cash_recoveries']}"
+        if row["new_cash"]:
+            value = float(row["new_cash"])
+            fields[f"h_{cohort}_cash"] = ("+" if value > 0 else "−" if value < 0 else "") + f"{unit}{abs(value):,.2f}"
     return fields
 
 

@@ -1,5 +1,7 @@
 # One pilot on Bondora European consumer loans
 
+The two Estonian cash recoveries depend on how much the pilot reveals beyond ordinary lending records. Giving both banks access to outcomes of the other loans from the same origination month removes all three follow-up switches among the ten selected pilots. [Sensitivity to prior strength and peer information](pilot-signal-sensitivity.md)
+
 ## Design fixed before scoring the test outcomes
 
 Use the July 20, 2021 snapshot of loans issued on Bondora, supplied by the named archival mirror. Each episode is one country, new/returning credit customer group and calendar month. Starting January 2013, consider the first funded loan in each nonempty cell as the candidate pilot. Use the loan number to order ties on an origination date. The initial decision uses the latest 12 fully mature monthly cohorts of the same group, requiring 50 past loans. The signal is a recorded default dated within 12 calendar months of origination. A common refresh reaches both policies before the beginning of month 13 after the pilot, when even the last pilot-month loan has aged a year. The refreshed rate uses the latest 12 mature months excluding the pilot cohort. If this window is empty, retain the initial rate.
@@ -43,3 +45,10 @@ With equal-size positions, the late-snapshot net gains on the three switches wer
 ## Reproduce
 
 Run `PYTHONPATH=src .venv/bin/python -m paper11.lender_pilot --out results --cache data/cache`. The versioned downloads are checked against SHA-256 before use. They occupy 36,879,821 and 84,385,563 bytes. The November 2026 public workbook has a newer layout without the two stable originating IDs. The two archived releases permit an exact linked cash audit. [Implementation and SHA-256 values](../src/paper11/lender_pilot.py) · [Timing and cash-accounting tests](../tests/test_lender_pilot.py)
+
+Both versioned Kaggle downloads have two public routes. On an unavailable route or an unexpected response, the downloader tries the same dataset and version on the alternate Kaggle host. The original ZIP fingerprints remain pinned. A re-packaged ZIP is also accepted if it contains exactly one correctly named CSV with the original byte length and SHA-256 digest. This preserves the research inputs even when a publisher changes ZIP metadata. In a clean-cache check, both current downloads matched the original ZIPs byte for byte.
+
+| Archive | Required member | Uncompressed bytes | SHA-256 of uncompressed CSV |
+|---|---|---:|---|
+| July 2021, version 1 | `LoanData_Bondora.csv` | 149,586,306 | `465abbefd71dc58afa5f293fdbff5a0300aa6cd43c6bd5736edad4c5c31fa460` |
+| May 2024, version 24 | `LoanData.csv` | 332,297,270 | `74741d5cd7b4ddc9711632189a9f47d4c48b5b7c230ea74c5015adf49039e40b` |

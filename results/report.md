@@ -201,6 +201,29 @@ The estimated share with a principal shortfall greater than one peso under hypot
 
 ![Philippine randomized offers and partially observed risk](rct_policy.png)
 
+### Did a cheaper pilot and an exposure-aware forecast transfer?
+
+Both Estonian successes had €530 principal on a 36-month contract and five prior loans. July's €530 pilot left the follow-up action unchanged. The revised rule values the next up to 25 loans at an exposure estimated before origination. It also allows the bank's ordinary risk estimate to change while waiting. The expected cash gain sets the funding decision. A separate score ranks the chance that a change of action will cover a direct pilot loss.
+
+| Cohort | Eligible | Old / new issued | Strict recoveries caught / available | New vs skip per eligible | New minus old per eligible |
+|---|---|---|---|---|---|
+| Bondora discovery, expanded | 228 | 10 / 17 | 2 / 2 | €76.69 | €5.05 |
+| Bondora, June–September 2024 | 0 | 0 / 0 | — | — | — |
+| Bondora, July 2020–September 2022 | 23 | 0 / 2 | 0 / 1 | €10.86 | €10.86 |
+| Prosper, January 2008–January 2012 | 30 | 0 / 0 | 0 / 0 | $0.00 | $0.00 |
+
+The two development cases were already known. The new rule selected 17 pilots, retained the unsuccessful February switch and added €5.05 per eligible opportunity over the old rule (95% block interval €-3.58 to €28.28). Doubling the effective strength of historical information or sharing the other matured same-month loans removed all three original switches.
+
+The primary holdout had 62,903 funded loans and no comparable grade histories. In the more seasoned window the revised rule earned €10.86 per eligible opportunity (95% block interval €0.00 to €21.41). Every euro came from the pilot loans themselves. The missed Finnish pilot lost €386.82; its replayed refusal of 25 follow-ups would have yielded €3,716.92 net on cash recorded in the November 2026 release. Later collections can change that number.
+
+The strict-recovery score had AUC 0.636 (95% interval 0.533 to 1.000 on 1,810 estimable draws of 2,500). This clears the prespecified numerical ranking criterion. There was one positive example. Its Finnish score beat seven of 15 comparable negatives (within-segment AUC 0.467). Average precision was 0.111 versus a prevalence of 0.043. No rule that issued a pilot on these dates captured the strict event.
+
+The same decision rule selected 0 of 30 opportunities at US lender Prosper. The archive supplied no strict recoveries among those eligible opportunities and thus no estimable AUC. The two US policies tied at the archived cash cutoff. This supplementary cross-lender test was locked after the Bondora results and before computing the Prosper pilot contrasts.
+
+![Historical contract size and the later ranking of all eligible candidates](pilot_forecast_validation.png)
+
+[Origination profiles](../docs/pilot-profiles.md) · [Information sensitivity](../docs/pilot-signal-sensitivity.md) · [Frozen model](../docs/pilot-rule-protocol.md) · [Bondora](../docs/pilot-holdout.md) · [Prosper](../docs/pilot-prosper.md) · [All policy results, ablations and intervals](pilot_rule_summary.csv)
+
 ## Limits and a three-month follow-up
 
 We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.

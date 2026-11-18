@@ -34,3 +34,9 @@ We developed the general one-pilot threshold after studying the adaptive three-a
 ## Transfer and late payments
 
 The 7(a) test keeps the 504 financial terms as its first specification, then recalibrates the same pricing formula on mature 7(a) outcomes before the decision period. The main US calculation uses a pre-specified borrower draw. Searching other possible branches after the fact illustrates existence. We report their probabilities separately. The Bondora study predefines a 36-month observation minimum and a broader 12-month cohort. Apparent cash gains in the broader cohort prompted a check on a later matched export. The 2024 results use identical loan identities and frozen decisions. Computing gains again restricts measurement error from early collections but does not remove remaining collections risk. [Details and cash components](lender-pilot.md)
+
+## Size-aware rule and information access
+
+The Estonian profiles and sensitivity to how much weight a lender gives a single observation were explored after viewing the original cash ledger. Both successes belong to one country, one customer group and neighboring months. The 2026 workbook lacks the earlier new/returning indicator, so the later-cohort protocol grouped by country and origination risk grade before outcomes were accessed. The comparison tests transport across both calendar time and the available segmentation. [Profiles](pilot-profiles.md) · [Information sensitivity](pilot-signal-sensitivity.md) · [Locked test](pilot-holdout.md)
+
+Named Bondora grades first appeared in September 2023. This prevented any qualifying pilot in the primary window. We kept that zero-coverage result and the original rule. The subsequent Prosper check used a publicly fixed cross-lender protocol for new pilot endpoints on a previously used source. [Supplementary test](pilot-prosper.md)

@@ -1,6 +1,6 @@
 # Paper 11 presentation
 
-Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–30 are for questions.
+Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–32 are for questions.
 
 ## Fifteen-minute speaking plan
 
@@ -33,6 +33,8 @@ Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has e
 | 28 | Break-even horizons with one label versus repeated learning and the parameter grid |
 | 29 | Can the ex-ante ranking identify useful pilots on US and European funded loans? |
 | 30 | Which Bondora switch covered a pilot loss, and which underwriting change actually occurred at M-Shwari? |
+| 31 | Which origination facts distinguished the two Estonian cases, and how did information access affect the switches? |
+| 32 | Did the revised rule recover losses in later Bondora cohorts or at Prosper? |
 
 ## Updating the deck
 
@@ -45,3 +47,5 @@ Slide 12 uses the two-cutoff rows marked `oracle_decile_totals` in [witness worl
 Slide 10 uses an illustrative four-band example and checks the aggregate counts in [policy information](../results/policy_information_summary.csv). Slide 14 scales the [one-pilot frontier](../results/information_value_frontier.csv) to principal 100. Slide 27 uses the chronological, early-national terms in the [SBA replay](../results/pilot_replay_summary.csv). Slide 28 compares the one-pilot rule with [repeated learning](../results/exploration_values.csv) and reports [parameter-grid counts](../results/information_value_stress.csv).
 
 Slide 29 uses the two principal tests in [pilot forecasting](../results/pilot_targeting_summary.csv). Slide 30 compares the October 2018 Estonian pilot on the [May 2024 ledger](../results/lender_pilot_followup.csv) with the TOBOA policy change documented in [field evidence](../docs/observed-pilot-evidence.md).
+
+Slides 31–32 link origination profiles to later observed cash and compare the dated test with the US cross-lender supplement. Numeric fields come from [profiles](../results/pilot_profiles_selected.csv) and the [policy evaluation](../results/pilot_rule_summary.csv). The case-level cash is valued at the common cutoff within each lender.

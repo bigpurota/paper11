@@ -1,6 +1,7 @@
 """Pinned public inputs and historical-policy emulation."""
 from dataclasses import dataclass
 import hashlib
+from http.client import HTTPException
 from pathlib import Path
 import shutil
 import tempfile
@@ -60,24 +61,36 @@ def fetch(name, cache):
     return fetch_pinned(url, expected, Path(cache) / (name + ".csv"))
 
 
-def fetch_pinned(url, expected, path):
-    """Retrieve an immutable research input and verify its bytes before use."""
+def fetch_pinned(url, expected, path, *, headers=None, alternates=(), equivalent=None):
+    """Use a verified cache or atomically install the first verified public download."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and checksum(path) == expected:
+
+    def verified(candidate):
+        return checksum(candidate) == expected or (equivalent is not None and equivalent(candidate))
+
+    if path.exists() and verified(path):
         return path
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as f:
         tmp = Path(f.name)
     try:
-        request = Request(url, headers={"User-Agent": "Paper11-academic-replication/1.0"})
-        with urlopen(request, timeout=120) as source, tmp.open("wb") as sink:
-            shutil.copyfileobj(source, sink)
-        if checksum(tmp) != expected:
-            raise ValueError(f"{path.name} source bytes differ from the published fingerprint")
-        tmp.replace(path)
+        routes = (url, *alternates)
+        for index, address in enumerate(routes):
+            try:
+                request = Request(address, headers={"User-Agent": "Paper11-academic-replication/1.0",
+                                                    **(headers or {})})
+                with urlopen(request, timeout=120) as source, tmp.open("wb") as sink:
+                    shutil.copyfileobj(source, sink)
+                if not verified(tmp):
+                    raise ValueError(f"{path.name} source bytes differ from the published fingerprint")
+            except (OSError, HTTPException, ValueError):
+                if index + 1 == len(routes):
+                    raise
+                continue
+            tmp.replace(path)
+            return path
     finally:
         tmp.unlink(missing_ok=True)
-    return path
 
 
 @dataclass

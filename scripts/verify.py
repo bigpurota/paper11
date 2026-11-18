@@ -252,6 +252,84 @@ def verify_transfer(out):
     assert (out / "lender_pilot_cash.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
+def verify_frozen_policy(out):
+    from sklearn.metrics import average_precision_score, roc_auc_score
+
+    def read(name):
+        return pd.read_csv(out / f"{name}.csv")
+
+    stats = read("pilot_rule_summary").set_index("cohort")
+    development = read("pilot_rule_development")
+    old = read("lender_pilot_episodes")
+    keys = ["country", "customer", "pilot_month"]
+    reproduced = development.rename(columns={"origin_month": "pilot_month"}).merge(
+        old, on=keys, validate="one_to_one", suffixes=("_new", "_old"))
+    assert len(reproduced) == len(old) == len(development)
+    assert reproduced.baseline_selected.eq(reproduced.selected_old).all()
+    profiles = read("pilot_profiles_selected")
+    assert len(profiles) == reproduced.selected_old.sum()
+    assert_allclose(profiles.principal / profiles.recent_median_principal,
+                    profiles.principal_to_recent_median, rtol=1e-10)
+    stability = read("pilot_profiles_field_agreement")
+    assert (stability.loans == len(development)).all() and (stability.discordant == 0).all()
+
+    sensitivity = read("pilot_signal_sensitivity")
+    delta = sensitivity.pd_without_pilot < sensitivity.decision_threshold
+    updated = sensitivity.pd_with_pilot < sensitivity.decision_threshold
+    assert (sensitivity.action_changed == (delta != updated)).all()
+    assert not sensitivity.duplicated(keys + ["prior_strength", "peer_feed"]).any()
+    assert sensitivity.groupby(keys).size().eq(6).all()
+    assert sensitivity.groupby(keys).ngroups == len(profiles)
+
+    panels = {"primary_36m": development.loc[development.primary], "expanded_12m": development}
+    for source in ("holdout", "prosper"):
+        episodes = read(f"pilot_{source}_episodes")
+        metadata = read(f"pilot_{source}_cohort").set_index("sample")
+        for sample, counts in metadata.iterrows():
+            panel = episodes.loc[episodes["sample"].eq(sample)]
+            assert len(panel) == counts.opportunities
+            assert panel.future_count.sum() == counts.positions_in_continuations
+            assert panel.future_count.between(0, 25).all() and panel.prior_n.ge(50).all()
+            assert pd.PeriodIndex(panel.origin_month, freq="M").shift(13).equals(
+                pd.PeriodIndex(panel.disclosure_month, freq="M"))
+            direction = panel.informed_lend.astype(float) - panel.baseline_lend.astype(float)
+            cash_shift = (direction * panel.future_cash).mask((direction == 0) | (panel.future_count == 0), 0.)
+            assert_allclose(panel.pilot_cash + cash_shift, panel.net_cash, atol=1e-7, equal_nan=True)
+            assert panel.loc[panel.future_count.eq(0), "action_changed"].eq(False).all()
+            panels[sample] = panel
+    support = read("pilot_holdout_support")
+    audit = read("pilot_holdout_cohort").set_index("sample")
+    assert support.estimable.eq(support.prior_n.ge(50)).all()
+    assert support.groupby("sample").originated.sum().eq(audit.window_issued).all()
+    assert support.groupby("sample").estimable.sum().eq(audit.opportunities).all()
+    assert set(stats.index) == set(panels)
+
+    for cohort, panel in panels.items():
+        row = stats.loc[cohort]
+        cases = panel.loc[panel.eligible]
+        assert (row.scheduled, row.eligible, row.selected, row.baseline_selected) == (
+            len(panel), len(cases), cases.selected.sum(), cases.baseline_selected.sum())
+        if cases.empty:
+            assert pd.isna(row.new_cash) and pd.isna(row.auc_cash)
+            continue
+        chosen = cases.net_cash.where(cases.selected, 0.)
+        diff = cases.selected.astype(int) - cases.baseline_selected.astype(int)
+        paired = (cases.net_cash * diff).where(diff != 0, 0.)
+        assert_allclose([chosen.mean(), paired.mean()], [row.new_cash, row.new_minus_baseline_cash], atol=1e-8)
+        labels = (cases.action_changed.astype("boolean") &
+                  cases.pilot_cash.astype("Float64").lt(-1e-12) & cases.net_cash.astype("Float64").gt(1e-12))
+        assert labels.count() == row.cash_event_known and labels.sum() == row.cash_recoveries
+        assert labels[cases.selected].sum() == row.new_cash_tp
+        known = labels.dropna().astype(int)
+        if known.nunique() == 2:
+            scores = cases.loc[known.index, "strict_probability"]
+            assert_allclose([roc_auc_score(known, scores), average_precision_score(known, scores)],
+                            [row.auc_cash, row.ap_cash], atol=1e-9)
+        else:
+            assert pd.isna(row.auc_cash) and pd.isna(row.ap_cash)
+    assert (out/"pilot_forecast_validation.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -299,11 +377,13 @@ def verify(out):
     verify_information_and_learning(out)
     verify_cost_of_a_pilot(out)
     verify_transfer(out)
-    print("PASS: transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
+    verify_frozen_policy(out)
+    print("PASS: locked cash contrasts, profile history, cross-lender signals, transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
 def compare_pilot_tables(out, reference):
-    for family in ("information_value", "pilot_replay", "pilot_transfer", "lender_pilot", "pilot_targeting"):
+    for family in ("information_value", "pilot_replay", "pilot_transfer", "lender_pilot", "pilot_targeting",
+                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper"):
         actual = {p.name for p in out.glob(f"{family}_*.csv")}
         expected = {p.name for p in reference.glob(f"{family}_*.csv")}
         if not expected or actual != expected:
@@ -311,7 +391,7 @@ def compare_pilot_tables(out, reference):
         for name in sorted(expected):
             pd.testing.assert_frame_equal(pd.read_csv(out / name), pd.read_csv(reference / name),
                                           check_exact=False, rtol=1e-8, atol=1e-10, obj=name)
-    print("PASS: fresh pilot-model and SBA tables match submitted research tables.")
+    print("PASS: regenerated pilot tables match the submitted theory, historical profiles, sensitivity and holdout results.")
 
 
 if __name__ == "__main__":

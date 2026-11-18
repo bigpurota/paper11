@@ -1,0 +1,3 @@
+sample,source_loans,source_min_issue,source_max_issue,origin_start,origin_end,window_issued,window_missing_labels,window_missing_cash,followup_issued,followup_missing_labels,followup_missing_cash,opportunities,positions_in_continuations,residual_pilot_ties,missing_net_cash,missing_net_scenario
+primary,843755,2009-02-28 18:05:12.999999612,2026-09-30 02:50:06.623000116,2024-06,2024-09,62903,0,0,64259,4400,0,0,0,0,0,0
+seasoned,843755,2009-02-28 18:05:12.999999612,2026-09-30 02:50:06.623000116,2020-07,2022-09,109203,0,1,157277,0,1,57,1375,0,0,0

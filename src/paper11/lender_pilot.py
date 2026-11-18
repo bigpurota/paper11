@@ -1,7 +1,9 @@
 """Chronological single-pilot decisions on Bondora's funded consumer loans."""
 import argparse
+from hashlib import file_digest
 from pathlib import Path
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
+from zlib import error as DecompressionError
 
 import numpy as np
 import pandas as pd
@@ -25,12 +27,33 @@ DEFAULT = -.45
 TOL = 1e-12
 
 
+def _same_csv(archive_path, member, size, sha):
+    """A publisher may regenerate a ZIP around exactly the same published CSV."""
+    try:
+        with ZipFile(archive_path) as zip_file:
+            entries = zip_file.infolist()
+            if len(entries) != 1 or entries[0].filename != member or entries[0].file_size != size:
+                return False
+            with zip_file.open(entries[0]) as raw:
+                return file_digest(raw, "sha256").hexdigest() == sha
+    except (BadZipFile, DecompressionError, EOFError, OSError, RuntimeError):
+        return False
+
+
+def _fetch_tape(cache, filename, url, sha, member, size, member_sha):
+    alternate = url.replace("https://api.kaggle.com/", "https://www.kaggle.com/api/")
+    return fetch_pinned(url, sha, Path(cache) / filename, alternates=(alternate,),
+                        equivalent=lambda path: _same_csv(path, member, size, member_sha))
+
+
 def fetch_bondora(cache):
-    return fetch_pinned(URL, SHA256, Path(cache) / "bondora-v1.zip")
+    return _fetch_tape(cache, "bondora-v1.zip", URL, SHA256, "LoanData_Bondora.csv", 149586306,
+                       "465abbefd71dc58afa5f293fdbff5a0300aa6cd43c6bd5736edad4c5c31fa460")
 
 
 def fetch_bondora_followup(cache):
-    return fetch_pinned(LATER_URL, LATER_SHA256, Path(cache) / "bondora-24-exact.zip")
+    return _fetch_tape(cache, "bondora-24-exact.zip", LATER_URL, LATER_SHA256, "LoanData.csv", 332297270,
+                       "74741d5cd7b4ddc9711632189a9f47d4c48b5b7c230ea74c5015adf49039e40b")
 
 
 def prepare(path):

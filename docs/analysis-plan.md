@@ -18,3 +18,9 @@ The prior three-application exercise motivated a subsequent one-pilot experiment
 ## Other lending archives
 
 The transfer designs specify the information date, primary portfolio, candidate loan, policy threshold and comparison against newly available public risk estimates. Archive draws and parameters were fixed before scoring those cohorts. Conditional examples discovered during examination and subsequent attempts to follow the European cash flows for longer are labeled retrospective. [SBA 7(a)](pilot-transfer.md) · [Bondora](lender-pilot.md) · [Forecast and evaluation design](pilot-targeting.md)
+
+## Rule redesign and temporal validation
+
+The 2018 cases were known during development. The revised rule and success criteria were published in [0fda6dd](https://github.com/bigpurota/paper11/commit/0fda6dd), followed by the workbook, episode definitions and dates in [9110afd](https://github.com/bigpurota/paper11/commit/9110afd). Outcome evaluation followed both commits. The shorter holdout cannot identify uncertainty with four-quarter blocks. [Protocol](pilot-rule-protocol.md) · [Cohorts](pilot-holdout.md)
+
+After the Bondora tests, we locked a supplementary test on a different lender in [11bf82d](https://github.com/bigpurota/paper11/commit/11bf82d). The existing Prosper archive had informed the earlier scorecard experiments. The pilot selection, decision changes and paired cash returns were first computed after this supplement was specified. [Design](pilot-prosper-protocol.md) · [Results](pilot-prosper.md)

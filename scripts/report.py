@@ -90,6 +90,80 @@ def pilot_cash_plot(out):
     plt.close(fig)
 
 
+def pilot_forecast_plot(out):
+    profiles = pd.read_csv(out / "pilot_profiles_selected.csv").sort_values("pilot_month")
+    test = pd.read_csv(out / "pilot_holdout_episodes.csv")
+    test = test.loc[test.eligible & test["sample"].eq("seasoned")].sort_values(
+        ["strict_probability", "origin_month"], ascending=[False, True])
+    recovered = test.action_changed & test.pilot_cash.lt(0) & test.net_cash.gt(0)
+    fig, (left, right) = plt.subplots(1, 2, figsize=(11.4, 4.9), layout="constrained")
+    muted, green, orange = "#75899b", "#087966", "#ba542e"
+    y = np.arange(len(profiles))
+    ratio = profiles.principal_to_recent_median
+    left.hlines(y, 0, ratio, color="#d8e0e6", linewidth=2)
+    left.axvline(1, color="#9ca9ae", linestyle=":", zorder=0)
+    left.scatter(ratio, y, color=muted, s=36, label="No change of decision")
+    for mask, color, marker, label in (
+            (profiles.euro_covered, green, "D", "Pilot loss covered"),
+            (profiles.action_changed & ~profiles.euro_covered, orange, "X", "Changed decision, net loss")):
+        left.scatter(ratio[mask], y[mask], color=color, marker=marker, s=74, label=label)
+    labels = (profiles.pilot_month + "   " + profiles.country + " " + profiles.customer)
+    left.set_yticks(y, labels, fontsize=8)
+    left.invert_yaxis()
+    left.set_xlim(0, max(ratio) * 1.08)
+    left.set_xlabel("Pilot principal / recent segment median")
+    left.set_title("Original ten selected pilots", loc="left", weight="bold")
+    left.legend(loc="upper right", fontsize=8, frameon=False)
+    x = np.arange(1, len(test)+1)
+    prob = 100 * test.strict_probability
+    right.plot(x, prob, color="#ccd4db", zorder=0)
+    right.scatter(x, prob, color=muted, s=28)
+    right.scatter(x[test.selected], prob[test.selected], facecolors="none", edgecolors=orange,
+                  linewidths=1.6, s=105, label="Selected by revised rule")
+    right.scatter(x[recovered], prob[recovered], marker="D", color=green, s=75,
+                  label="Pilot loss covered")
+    right.set(xlabel="Rank at issue (highest forecast first)", ylabel="Forecast chance of recovery (%)")
+    right.set_xticks([1, 5, 9, 15, 20, len(test)])
+    right.set_title("Later Bondora test, eligible pilots", loc="left", weight="bold")
+    right.legend(frameon=False, fontsize=8)
+    for ax in (left, right):
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="x", alpha=.10)
+        ax.tick_params(length=3)
+    fig.savefig(out / "pilot_forecast_validation.png", dpi=165, metadata={"Software": "Matplotlib"})
+    plt.close(fig)
+
+
+def frozen_rule_sections(out):
+    summary = pd.read_csv(out / "pilot_rule_summary.csv").set_index("cohort")
+    cells = pd.read_csv(out / "pilot_holdout_cohort.csv").set_index("sample")
+    cohorts = [("expanded_12m", "Bondora discovery, expanded", "€"),
+               ("primary", "Bondora, June–September 2024", "€"),
+               ("seasoned", "Bondora, July 2020–September 2022", "€"),
+               ("prosper", "Prosper, January 2008–January 2012", "$")]
+    rows = []
+    for key, label, unit in cohorts:
+        row = summary.loc[key]
+        def money(column):
+            v = row[column]
+            return "—" if pd.isna(v) else f"{unit}{v:,.2f}"
+        rows.append({"Cohort": label, "Eligible": row.eligible, "Old / new issued":
+                     f"{row.baseline_selected} / {row.selected}", "Strict recoveries caught / available":
+                     f"{row.new_cash_tp} / {row.cash_recoveries}" if row.eligible else "—",
+                     "New vs skip per eligible": money("new_cash"),
+                     "New minus old per eligible": money("new_minus_baseline_cash")})
+    dev, test, us = [summary.loc[x] for x in ["expanded_12m", "seasoned", "prosper"]]
+    return ["### Did a cheaper pilot and an exposure-aware forecast transfer?",
+            "Both Estonian successes had €530 principal on a 36-month contract and five prior loans. July's €530 pilot left the follow-up action unchanged. The revised rule values the next up to 25 loans at an exposure estimated before origination. It also allows the bank's ordinary risk estimate to change while waiting. The expected cash gain sets the funding decision. A separate score ranks the chance that a change of action will cover a direct pilot loss.",
+            table(pd.DataFrame(rows)),
+            f"The two development cases were already known. The new rule selected {dev.selected} pilots, retained the unsuccessful February switch and added €{dev.new_minus_baseline_cash:.2f} per eligible opportunity over the old rule (95% block interval €{dev.new_minus_baseline_cash_low:.2f} to €{dev.new_minus_baseline_cash_high:.2f}). Doubling the effective strength of historical information or sharing the other matured same-month loans removed all three original switches.",
+            f"The primary holdout had {cells.loc['primary', 'window_issued']:,} funded loans and no comparable grade histories. In the more seasoned window the revised rule earned €{test.new_cash:.2f} per eligible opportunity (95% block interval €{test.new_cash_low:.2f} to €{test.new_cash_high:.2f}). Every euro came from the pilot loans themselves. The missed Finnish pilot lost €386.82; its replayed refusal of 25 follow-ups would have yielded €3,716.92 net on cash recorded in the November 2026 release. Later collections can change that number.",
+            f"The strict-recovery score had AUC {test.auc_cash:.3f} (95% interval {test.auc_cash_low:.3f} to {test.auc_cash_high:.3f} on {test.auc_cash_draws:,} estimable draws of 2,500). This clears the prespecified numerical ranking criterion. There was one positive example. Its Finnish score beat seven of 15 comparable negatives (within-segment AUC {test.cash_segment_auc:.3f}). Average precision was {test.ap_cash:.3f} versus a prevalence of {test.cash_prevalence:.3f}. No rule that issued a pilot on these dates captured the strict event.",
+            f"The same decision rule selected {us.selected} of {us.eligible} opportunities at US lender Prosper. The archive supplied no strict recoveries among those eligible opportunities and thus no estimable AUC. The two US policies tied at the archived cash cutoff. This supplementary cross-lender test was locked after the Bondora results and before computing the Prosper pilot contrasts.",
+            "![Historical contract size and the later ranking of all eligible candidates](pilot_forecast_validation.png)",
+            "[Origination profiles](../docs/pilot-profiles.md) · [Information sensitivity](../docs/pilot-signal-sensitivity.md) · [Frozen model](../docs/pilot-rule-protocol.md) · [Bondora](../docs/pilot-holdout.md) · [Prosper](../docs/pilot-prosper.md) · [All policy results, ablations and intervals](pilot_rule_summary.csv)"]
+
+
 def targeting_sections(out):
     target = pd.read_csv(out / "pilot_targeting_summary.csv")
     selected = target.query("forecast == 'fixed_risk' and outcome == 'scenario'")
@@ -251,10 +325,12 @@ def write_report(out, comp):
         "## Can a small randomized audit improve ABR measurement?",table(audit),
         "For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both designs reveal the same number of outcomes. Financial exploration costs may differ. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.",
         *extension_sections(out),
+        *frozen_rule_sections(out),
         "## Limits and a three-month follow-up",
         "We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.",
         "[Data provenance](../docs/sources.md) · [Implementation](../docs/algorithm.md) · [Deviations](../docs/deviations.md) · [Simulation](../docs/simulation.md)"
     ]
+    pilot_forecast_plot(out)
     (out/"report.md").write_text("\n\n".join(sections)+"\n")
 
 

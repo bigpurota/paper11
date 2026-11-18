@@ -1,0 +1,2 @@
+source_rows,valid_funded_listings,unique_funded_loans,duplicate_listing_rows,repeated_loan_keys,unresolved_reported_defaults,missing_cash_source,sample,origin_start,origin_end,opportunities,nonempty_cells,window_issued,window_missing_labels,window_missing_cash,followup_issued,followup_missing_labels,followup_missing_cash,positions_in_continuations,missing_pilot_signal,missing_net_cash,missing_net_scenario
+113937,113932,113061,871,827,182,0,prosper,2008-01,2012-01,293,338,31947,73,0,40582,97,0,6613,0,0,0

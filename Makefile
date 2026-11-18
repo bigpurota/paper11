@@ -25,6 +25,11 @@ all: setup
 	$(PY) -m paper11.pilot_transfer --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.lender_pilot --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.pilot_targeting --out "$(OUT)"
+	$(PY) -m paper11.pilot_profiles --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.pilot_signal_sensitivity --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.pilot_holdout --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.pilot_prosper --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.pilot_rule_evaluation --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) scripts/report.py --out "$(OUT)"
 	$(PY) scripts/verify.py --out "$(OUT)"
@@ -37,6 +42,7 @@ $(VENV)/.paper11-installed: requirements.txt requirements-lock.txt
 data: setup
 	$(PY) -c "from paper11.data import fetch, SOURCES; [fetch(s, '$(CACHE)') for s in SOURCES]"
 	$(PY) -c "from paper11.lender_pilot import fetch_bondora, fetch_bondora_followup; fetch_bondora('$(CACHE)'); fetch_bondora_followup('$(CACHE)')"
+	$(PY) -c "from paper11.pilot_holdout import fetch_holdout; fetch_holdout('$(CACHE)')"
 empirical: setup
 	$(PY) -m paper11.empirical --out "$(OUT)" --cache "$(CACHE)"
 simulation: setup
@@ -53,6 +59,11 @@ extensions: setup
 	$(PY) -m paper11.pilot_transfer --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.lender_pilot --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.pilot_targeting --out "$(OUT)"
+	$(PY) -m paper11.pilot_profiles --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.pilot_signal_sensitivity --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.pilot_holdout --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.pilot_prosper --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.pilot_rule_evaluation --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 report: setup
 	$(PY) scripts/report.py --out "$(OUT)"

@@ -13,6 +13,11 @@ from scipy.special import expit
 from sklearn.model_selection import KFold
 
 SOURCES = {
+    "sba7a_2010_2019": (
+        "https://data.sba.gov/sites/default/files/uploaded_resources/"
+        "FOIA_7a_FY2010_FY2019_asof_260930.csv",
+        "39aa32b71fb5dbb4bfb178c9b3d597c92bb6903622027c2f8360d13e57d0abb2",
+    ),
     "sba7a_1991_1999": (
         "https://data.sba.gov/sites/default/files/uploaded_resources/"
         "FOIA_7a_FY1991_FY1999_asof_260930.csv",

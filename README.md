@@ -78,6 +78,14 @@ We anchored the forecast to the historical rate and let the model learn only the
 
 ![Earlier Finnish risk forecasts and the four-month anchored test](results/frequency_forecasts.png)
 
+### When should a lender trust its local history?
+
+The Dutch local forecast averaged **27.19%** against **4.79%** realized default exposure. Three consecutive forecasts still used the same 73 first-year defaults among 245 loans from the first two months of the market. Bondora paused Dutch origination for further testing and reopened in January 2023. Before the eight forecasts, recent issuance was already 11 to 71 times the volume in the mature history. Across the full later Dutch vintages there were 687 defaults among 16,621 loans. Holding contract term and loan-size mix at their early proportions still gives a later default rate of 4.60%. In seven of the eight portfolios the observed rate fell below both forecasts. Even weights chosen with hindsight leave at least 9.14 percentage points of mean absolute error. [The Dutch vintages, sampling and dated announcements](docs/dutch-frequency.md)
+
+Our rule balances estimated variation between other markets against uncertainty in the local rate, with a discount for rapid expansion. In the known Dutch cases it forecast 22.29%; the broader rate alone gave 13.36%. In a separate test we applied the fixed rule to Wells Fargo SBA 7(a) loans in 2015–2019. Across **828 state–quarters and 23,849 loans**, the hybrid reduced Brier loss by 0.001684 relative to local (95% block interval +0.001131 to +0.002142) and by 0.000014 relative to the rest of the bank (−0.000005 to +0.000046). The hard selector identified the closer rate in 489 of 828 state–quarters; always using the other states was correct in 476. All 67 local-majority calls fell in the final six quarters. Both the hybrid and the outside-state rate implied the same lending actions under the two stated payoff scenarios. [Protocol published before scoring](https://github.com/bigpurota/paper11/commit/99db60b) · [Trust condition](docs/local-trust.md) · [External lender results](docs/local-trust-bank.md)
+
+![Local and broader forecasts on Bondora and Wells Fargo](results/local_trust_transfer.png)
+
 ### What other lenders can establish
 
 * **US SBA 504.** The fixed rule selected three of 79 initially loss-making region-quarters. All three subsequent actions stayed the same after the ordinary public update. The scenario gain per eligible episode was −0.022 (95% block interval −0.076 to +0.005), on loans of principal 100. [Dates, controls and assumptions](docs/pilot-replay.md)
@@ -109,6 +117,6 @@ make reproduce    # rerun into an empty directory and compare each research arti
 make slides       # refresh PPTX and PDF using LibreOffice; the finished files are included
 ```
 
-Nine fingerprinted source files total about 870 MB (decimal) in the ignored `data/cache/`. Use `PYTHON=/path/to/python3.12` for a differently named interpreter. The results directory contains aggregate research outputs, including paired episode-level receipts. [Dataset catalog](docs/sources.md) · [Analysis plan](docs/analysis-plan.md) · [Deviations](docs/deviations.md) · [Verification and CI](docs/verification.md)
+Ten fingerprinted source files total about 1.125 GB (decimal) in the ignored `data/cache/`. Use `PYTHON=/path/to/python3.12` for a differently named interpreter. The results directory contains aggregate research outputs, including paired episode-level receipts. [Dataset catalog](docs/sources.md) · [Analysis plan](docs/analysis-plan.md) · [Deviations](docs/deviations.md) · [Verification and CI](docs/verification.md)
 
 Team 12 implemented the replication and its extensions with Codex assistance. Kozodoi and coauthors developed the original methods and conducted the Monedo study.

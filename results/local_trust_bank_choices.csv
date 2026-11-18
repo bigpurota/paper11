@@ -1,0 +1,5 @@
+sample,choice,books,loans,local_closer,pooled_closer,ties,mean_local_gain,mean_weight,median_local_n,median_recent_n
+matched,local,67,3282,40,27,0,7.41953425591e-05,0.693135045507,412,489
+matched,pooled,761,20567,312,449,0,-0.00182349469452,0.0457983406563,82,111
+operational,local,67,3282,40,27,0,7.41953425591e-05,0.693135045507,412,489
+operational,pooled,781,20591,312,449,20,-0.00177679828749,0.0446255278354,79,107

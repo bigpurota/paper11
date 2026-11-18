@@ -258,6 +258,18 @@ In Netherlands, the 2024-06 pilot's ordinary news moved the bank from decline to
 
 [Public protocol](../docs/frequency-protocol.md) · [Panel and overlap](../docs/frequency-panel.md) · [Model](../docs/frequency-model.md) · [Full test, thresholds and cash](../docs/frequency-test.md)
 
+### A local market at launch and a test at a different bank
+
+The Dutch first-year rate at issue averaged 27.19% across eight opportunities. Three forecasts used the same 245 loans disbursed in September and October 2022, the first two months of the market. Among later loans, 687 of 16,621 recorded a first-year default. In the first-25 portfolios 9 of 200 loans defaulted, for a mean defaulted share of principal of 4.79%. The change in risk across origination months accounts for 22.98 percentage points of the 22.40-point gap. [Calendar, contracts and decomposition](../docs/dutch-frequency.md)
+
+The size of the recent local business and differences among other mature markets determine the weight placed on local data. The hybrid Dutch forecast averaged 22.29%, and the other-country rate 13.36%. The rule was designed after seeing these cases. For an independent test we fixed the same rule on Wells Fargo's SBA 7(a) state portfolios before opening a new approval archive. [Rule and test registration](../docs/local-trust-protocol.md)
+
+Across 828 supported state-quarters and 23,849 loans, the hybrid's mean Brier improvement was +0.001684 over local (95% block interval +0.001131 to +0.002142) and +0.000014 over the outside-state rate (-0.000005 to +0.000046). Local was closer in 40 of 67 local-majority calls. Broader was closer in 449 of 761 other calls. This gives 489 correct choices against 476 for always choosing the outside-state rate. The hard choice and the continuous hybrid have distinct endpoints.
+
+![Dutch launch forecasts and geographic choices at Wells Fargo](local_trust_transfer.png)
+
+[Decision condition and assumptions](../docs/local-trust.md) · [Wells Fargo methods, scenarios and results](../docs/local-trust-bank.md) · [Paired accuracy](local_trust_bank_metrics.csv) · [Economic scenarios](local_trust_bank_policy.csv)
+
 ## Limits and a three-month follow-up
 
 We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.

@@ -721,6 +721,129 @@ def verify_frequency_study(out):
     print("PASS: frequency baseline diagnosis, future-position audit, locked slope fits and sharp policy comparisons.")
 
 
+def verify_local_trust(out):
+    def read(name):
+        return pd.read_csv(out / (name + ".csv"))
+
+    cases = read("dutch_frequency_episodes").set_index("origin_month")
+    replay = read("dutch_trust").set_index("origin_month")
+    donors = read("dutch_frequency_donors")
+    calendar = read("dutch_frequency_vintages").set_index("origin_month")
+    assert not cases.index.has_duplicates and cases.index.equals(replay.index)
+    for s, row in cases.iterrows():
+        history = calendar.loc[row.historical_start:row.historical_end]
+        later = calendar.loc[row.disclosure_month]
+        assert history.labels.sum() == row.historical_labels and history.defaults.sum() == row.historical_defaults
+        assert row.future_labels == later.labels and row.first25_labels == later.first25_labels
+        raw = history.defaults.sum() / history.labels.sum()
+        book = later.first25_default_principal / later.first25_known_principal
+        assert_allclose([row.change_across_vintages, row.forecast_gap],
+                        [raw - later.defaults/later.labels, row.local_forecast - book])
+        w = replay.loc[s]
+        other = donors.loc[donors.origin_month.eq(s)]
+        assert int(other.historical_labels.sum()) == row.external_labels
+        n = other.historical_labels
+        q = (other.historical_defaults + .5)/(n+1)
+        keep = n.ge(20)
+        tau = max(0., q[keep].var() - (q[keep]*(1-q[keep])/(n[keep]+1)).mean()) if keep.sum() >= 3 else 0.
+        assert_allclose(w.tau2, tau, atol=1e-10)
+        assert_allclose(w.pooled, (other.historical_defaults.sum()+.5)/(n.sum()+1))
+        effective = row.historical_labels * min(1., row.historical_labels / max(1., row.recent_issued))
+        local = (row.historical_defaults + .5) / (row.historical_labels + 1)
+        weight = tau / (tau + local*(1-local)/(effective+1))
+        assert_allclose([w.local, w.effective_n, w.weight, w.outcome],
+                        [local, effective, weight, book])
+        assert_allclose(w.hybrid, w.local*w.weight + (1-w.weight)*w.pooled)
+    lower = replay[["local", "pooled"]].min(axis=1)
+    upper = replay[["local", "pooled"]].max(axis=1)
+    hindsight_error = (replay.outcome.clip(lower=lower, upper=upper) - replay.outcome).abs()
+    assert replay.outcome.lt(lower).sum() == 7 and replay.outcome.gt(upper).sum() == 0
+    assert np.isclose(100 * hindsight_error.mean(), 9.14, atol=.005)
+    assert_allclose(cases.forecast_gap, cases[["smoothing_effect", "change_across_vintages",
+                                              "first25_selection_effect", "principal_weight_effect"]].sum(axis=1))
+    mix = read("dutch_frequency_contract_mix")
+    assert set(mix.original_term_months.astype(str)) and np.isclose(mix.early_weight.sum(), 1.)
+    assert_allclose(mix.loc[mix.early_labels.gt(0), "later_rate_at_early_weights"],
+                    (mix.early_weight * mix.later_defaults / mix.later_labels)[mix.early_labels.gt(0)])
+
+    rows = read("local_trust_bank_episodes")
+    assert not rows.duplicated(["state", "quarter"]).any()
+    for field, lag in [("history_from", -24), ("history_to", -13), ("recent_from", -12), ("recent_to", -1)]:
+        expected = pd.PeriodIndex(rows.quarter, freq="Q") + lag
+        assert expected.equals(pd.PeriodIndex(rows[field], freq="Q"))
+    assert rows.quarter.nunique() == 19 and rows.n.le(rows.issued).all() and rows.defaults.le(rows.n).all()
+    coverage = read("local_trust_bank_coverage")
+    exclusions = ["missing_or_reversed_origination", "outside_states", "invalid_principal",
+                  "premature_chargeoff", "immature", "retained"]
+    assert np.array_equal(coverage.bank_rows, coverage[exclusions].sum(axis=1))
+    assert np.array_equal(coverage.retained, coverage.known_flags + coverage.unknown_flags)
+    scored = rows.loc[rows.other_n.gt(0) & rows.n.gt(0)]
+    forecasts = np.where(scored.local_n.gt(0), (scored.local_events+.5)/(scored.local_n+1), scored.pooled)
+    assert_allclose(forecasts, scored.local)
+    assert_allclose(scored.pooled, (scored.other_events+.5)/(scored.other_n+1))
+    effective = scored.local_n*np.minimum(1., scored.local_n/scored.recent_n.clip(lower=1))
+    variance = scored.local*(1-scored.local)/(effective+1)
+    weight = np.where(scored.local_n.gt(0), scored.tau2/(scored.tau2+variance), 0.)
+    assert_allclose(effective, scored.effective_n)
+    assert_allclose(weight, scored.weight, atol=1e-10)
+    assert_allclose(scored.hybrid, scored.local*weight + scored.pooled*(1-weight))
+    assert_allclose(scored.hard, np.where(weight > .5, scored.local, scored.pooled))
+    metrics = read("local_trust_bank_metrics")
+    choices = read("local_trust_bank_choices")
+    policy = read("local_trust_bank_policy")
+    for sample, data in [("matched", scored.loc[scored.local_n.gt(0)]), ("operational", scored)]:
+        for scope, group in [("all", data), *data.groupby("quarter", sort=True)]:
+            table = metrics.loc[metrics["sample"].eq(sample) & metrics.group.eq(scope)]
+            for basis, weights in [("equal_books", np.ones(len(group))),
+                                   ("loan_weighted", group.n),
+                                   ("dollars_within", np.ones(len(group)))]:
+                target = group.defaults / group.n if basis != "dollars_within" else group.default_principal/group.known_principal
+                values = {}
+                for name in ("local", "pooled", "hybrid", "hard", "support_hybrid"):
+                    p = group[name]
+                    loss = p*p + target*(1-2*p)
+                    values[name] = np.average(loss, weights=weights)
+                for ref in ("local", "pooled"):
+                    for name in ("hybrid", "hard", "support_hybrid"):
+                        values[ref+"_minus_"+name] = values[ref]-values[name]
+                reported = table.loc[table.basis.eq(basis)].set_index("method")["mean"]
+                assert set(reported.index) == set(values)
+                assert_allclose(reported, [values[k] for k in reported.index], atol=1e-11)
+        # Independently choose the closer predictor from absolute forecast errors.
+        z = data.defaults/data.n
+        delta_errors = (data.pooled-z)**2 - (data.local-z)**2
+        for g in choices.loc[choices["sample"].eq(sample)].itertuples():
+            mask = data.weight.gt(.5) if g.choice == "local" else data.weight.le(.5)
+            a = delta_errors[mask]
+            assert (len(a), a.gt(1e-12).sum(), a.lt(-1e-12).sum()) == (g.books, g.local_closer, g.pooled_closer)
+        for r in policy.loc[policy["sample"].eq(sample)].itertuples():
+            signed = (data[r.method]<r.cutoff).astype(int) - (data[r.reference]<r.cutoff).astype(int)
+            cash = r.bad*data.default_principal + r.good*(data.known_principal-data.default_principal)
+            unknown = data.principal-data.known_principal
+            assert (signed.gt(0).sum(), signed.lt(0).sum()) == (r.new_lending, r.new_declines)
+            assert_allclose([r.known_delta, r.delta_lower, r.delta_upper],
+                            [(signed*cash).sum(), (signed*cash+np.minimum(r.bad*signed*unknown,r.good*signed*unknown)).sum(),
+                             (signed*cash+np.maximum(r.bad*signed*unknown,r.good*signed*unknown)).sum()], atol=1e-4)
+    # Recreate resampled quarter lists directly, preserving all states within each quarter.
+    matched = scored.loc[scored.local_n.gt(0)]
+    quarter = pd.PeriodIndex(matched.quarter, freq="Q").asi8
+    grid = np.arange(quarter.min(), quarter.max()+1)
+    rng = np.random.default_rng(26011)
+    start = rng.integers(len(grid), size=(2500, 5))
+    indices = (start[:,:,None] + np.arange(4)) % len(grid)
+    draws = indices.reshape(2500,-1)[:,:len(grid)]
+    target = matched.defaults/matched.n
+    for ref in ("local", "pooled"):
+        diff = (matched[ref]-target)**2 - (matched.hybrid-target)**2
+        sums = diff.groupby(quarter).sum().reindex(grid, fill_value=0).to_numpy()
+        counts = diff.groupby(quarter).count().reindex(grid, fill_value=0).to_numpy()
+        value = sums[draws].sum(axis=1)/counts[draws].sum(axis=1)
+        record = metrics.query("sample == 'matched' and group == 'all' and basis == 'equal_books'")
+        pair = record.set_index("method").loc[ref+"_minus_hybrid"]
+        assert_allclose(np.quantile(value, [.025,.975]), [pair.ci_low,pair.ci_high], atol=1e-11)
+    print("PASS: Dutch vintage decomposition, donor trust, external bank scores, choices, dated block intervals and policy scenarios.")
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -771,12 +894,13 @@ def verify(out):
     verify_frozen_policy(out)
     verify_signal_study(out)
     verify_frequency_study(out)
+    verify_local_trust(out)
     print("PASS: locked cash contrasts, profile history, cross-lender signals, transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
 def compare_pilot_tables(out, reference):
     for family in ("information_value", "pilot_replay", "pilot_transfer", "lender_pilot", "pilot_targeting",
-                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper", "finnish_pilot", "frequency"):
+                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper", "finnish_pilot", "frequency", "dutch_frequency", "local_trust_bank"):
         actual = {p.name for p in out.glob(f"{family}_*.csv")}
         expected = {p.name for p in reference.glob(f"{family}_*.csv")}
         if not expected or actual != expected:
@@ -784,6 +908,8 @@ def compare_pilot_tables(out, reference):
         for name in sorted(expected):
             pd.testing.assert_frame_equal(pd.read_csv(out / name), pd.read_csv(reference / name),
                                           check_exact=False, rtol=1e-8, atol=1e-10, obj=name)
+    pd.testing.assert_frame_equal(pd.read_csv(out / "dutch_trust.csv"), pd.read_csv(reference / "dutch_trust.csv"),
+                                  check_exact=False, rtol=1e-8, atol=1e-10)
     print("PASS: regenerated pilot tables match the submitted theory, historical profiles, sensitivity and holdout results.")
 
 

@@ -226,6 +226,40 @@ def frequency_fields():
     return values
 
 
+def local_trust_fields():
+    episodes = read_table("dutch_frequency_episodes")
+    forecasts = read_table("dutch_trust")
+    values = {f"nl_{name}": percent(statistics.mean(float(r[name]) for r in forecasts))
+              for name in ("local", "pooled", "hybrid", "outcome")}
+    volume = [float(r["volume_ratio"]) for r in episodes]
+    values.update(nl_lo=f"{min(volume):.1f}", nl_hi=f"{max(volume):.1f}")
+    for label, column in [("small_d", "first25_defaults"), ("small_n", "first25_labels"),
+                          ("total_d", "future_defaults"), ("total_n", "future_labels")]:
+        values["nl_" + label] = format(sum(int(r[column]) for r in episodes), ",")
+    values["nl_total_pct"] = percent(sum(int(r["future_defaults"]) for r in episodes)
+                                     / sum(int(r["future_labels"]) for r in episodes))
+    scores = matching(read_table("local_trust_bank_metrics"), sample="matched",
+                      group="all", basis="equal_books")
+    for method in ("local", "pooled", "hybrid"):
+        row = one(scores, method=method)
+        values["wf_" + method] = f"{float(row['mean']):.6f}"
+    values["wf_books"] = row["books"]
+    values["wf_loans"] = format(int(row["loans"]), ",")
+    for method in ("local", "pooled"):
+        contrast = one(scores, method=method + "_minus_hybrid")
+        for label, key in (("gain", "mean"), ("low", "ci_low"), ("high", "ci_high")):
+            values[f"wf_{method}_{label}"] = f"{float(contrast[key]):+.6f}".replace("-", "−")
+    choices = matching(read_table("local_trust_bank_choices"), sample="matched")
+    for method in ("local", "pooled"):
+        choice = one(choices, choice=method)
+        values["wf_" + method + "_correct"] = choice[method + "_closer"] + "/" + choice["books"]
+    action = one(read_table("local_trust_bank_policy"), sample="matched", good="0.1",
+                 bad="-0.45", method="hybrid", reference="local")
+    values["wf_cut"] = percent(action["cutoff"])
+    values["wf_add"] = action["new_lending"]
+    return values
+
+
 def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
@@ -239,6 +273,7 @@ def result_fields():
     fields.update(transfer_fields())
     fields.update(signal_fields())
     fields.update(frequency_fields())
+    fields.update(local_trust_fields())
     for key, dataset in [("orig", "monedo"), ("tw", "taiwan"), ("pr", "prosper")]:
         for label, method in [("a", "accepts"), ("i", "ipw"), ("b", "bayes")]:
             fields[f"{key}_eval_{label}"] = number(one(comparison, table=2, method=method, metric="abr")[dataset])

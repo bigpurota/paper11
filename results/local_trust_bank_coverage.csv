@@ -1,0 +1,4 @@
+source,file_rows,bank_rows,missing_or_reversed_origination,outside_states,invalid_principal,premature_chargeoff,immature,retained,known_flags,unknown_flags
+sba7a_1991_1999,337033,37072,3623,2,0,0,0,33447,33443,4
+sba7a_2000_2009,690333,37396,3650,1,0,0,0,33745,33744,1
+sba7a_2010_2019,545751,44763,5103,1,0,0,5,39654,39654,0

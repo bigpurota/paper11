@@ -1,6 +1,8 @@
 # Paper 11 presentation
 
-Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–36 are for questions.
+Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–38 are for questions.
+
+The cover, HSE mark, running header and three-rule tables follow the team’s [Paper 15 presentation](https://github.com/bigpurota/paper15-lou-shu/tree/0c5d43e18a5ef9134bc6fae656a29f204f31f7cb/slides).
 
 ## Fifteen-minute speaking plan
 
@@ -39,6 +41,8 @@ Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has e
 | 34 | How much did boosting learn from a single pilot beyond ordinary information and other loans? |
 | 35 | Why did the historical rate track Finnish risk more closely than boosting? |
 | 36 | Did anchoring the forecast to the country rate change a later lending decision? |
+| 37 | Why did the Dutch historical frequency overpredict losses after launch? |
+| 38 | When did the blend of local and other-state frequencies improve a forecast at Wells Fargo? |
 
 ## Updating the deck
 
@@ -57,3 +61,5 @@ Slides 31–32 link origination profiles to later observed cash and compare the 
 Slides 33–34 use the [three Finnish cases](../results/finnish_pilot_cases.csv) and [paired model evaluation](../results/pilot_signal_ml_metrics.csv). Forecasts on these slides use information available at the date indicated. Gross cash uses the common workbook cutoff.
 
 Slides 35–36 use [earlier error profiles](../results/frequency_diagnosis_support.csv), [fresh forecast errors](../results/frequency_evaluation.csv), and [changes in lending decisions](../results/frequency_action_summary.csv). Both slides have editable native tables.
+
+Slide 37 compares the eight [Dutch vintage histories](../results/dutch_frequency_episodes.csv) with the [forecasts at issue](../results/dutch_trust.csv). Slide 38 reports [paired forecast losses](../results/local_trust_bank_metrics.csv) and [lending decisions at the prespecified cutoff](../results/local_trust_bank_policy.csv) for Wells Fargo state-quarters. The [dated protocol](../docs/local-trust-protocol.md) defines the weights and the comparison.

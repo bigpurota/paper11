@@ -30,3 +30,7 @@ After the Bondora tests, we locked a supplementary test on a different lender in
 The three known Finnish cases motivated a separate experiment on country-level portfolios. Before evaluating the new dates we published the issue and disclosure inputs, model and tuning values, decision rule, payoff and forecast comparisons and calendar-block interval. The full twenty-month test and the overlapping seven-month subset were chosen at that point. The latter's pilots and follow-up positions were all outside previously scored positions. [Protocol commit](https://github.com/bigpurota/paper11/commit/dc96e5e) · [Position and date audit](pilot-signal-panel.md) · [Results](pilot-signal-ml.md)
 
 The later frequency diagnosis uses only the earlier 48 published books. Before computing new paired endpoints we published the anchored model, a fixed first/26th candidate rule, payoff definitions, missing-principal bounds and four-month holdout. [Protocol commit](https://github.com/bigpurota/paper11/commit/fff202a) · [Results](frequency-test.md)
+
+## Local credibility at a different lender
+
+The Dutch reconstruction is explanatory. The new test of the trust rule at Wells Fargo used one prespecified bank identifier, project states, the fiscal 2010–2019 approval release, and 19 calendar quarters. We published the local, outside-state, hybrid, hard and no-expansion comparisons, both decision cutoffs and the confirmation criterion before examining the new US targets. [Protocol commit](https://github.com/bigpurota/paper11/commit/99db60b) · [Results](local-trust-bank.md)

@@ -90,6 +90,62 @@ def pilot_cash_plot(out):
     plt.close(fig)
 
 
+def trust_sections(out):
+    dutch = pd.read_csv(out / "dutch_trust.csv")
+    cases = pd.read_csv(out / "dutch_frequency_episodes.csv")
+    scores = pd.read_csv(out / "local_trust_bank_metrics.csv").query(
+        "sample == 'matched' and group == 'all' and basis == 'equal_books'").set_index("method")
+    choices = pd.read_csv(out / "local_trust_bank_choices.csv").query("sample == 'matched'").set_index("choice")
+    high, low = choices.loc["local"], choices.loc["pooled"]
+    base, broad = scores.loc["local_minus_hybrid"], scores.loc["pooled_minus_hybrid"]
+    correct = int(high.local_closer + low.pooled_closer)
+    majority = int(high.pooled_closer + low.pooled_closer)
+    return [
+        "### A local market at launch and a test at a different bank",
+        f"The Dutch first-year rate at issue averaged {dutch.local.mean():.2%} across eight opportunities. Three forecasts used the same 245 loans disbursed in September and October 2022, the first two months of the market. Among later loans, {cases.future_defaults.sum():,} of {cases.future_labels.sum():,} recorded a first-year default. In the first-25 portfolios {cases.first25_defaults.sum()} of {cases.first25_labels.sum()} loans defaulted, for a mean defaulted share of principal of {dutch.outcome.mean():.2%}. The change in risk across origination months accounts for {100*cases.change_across_vintages.mean():.2f} percentage points of the {100*cases.forecast_gap.mean():.2f}-point gap. [Calendar, contracts and decomposition](../docs/dutch-frequency.md)",
+        f"The size of the recent local business and differences among other mature markets determine the weight placed on local data. The hybrid Dutch forecast averaged {dutch.hybrid.mean():.2%}, and the other-country rate {dutch.pooled.mean():.2%}. The rule was designed after seeing these cases. For an independent test we fixed the same rule on Wells Fargo's SBA 7(a) state portfolios before opening a new approval archive. [Rule and test registration](../docs/local-trust-protocol.md)",
+        f"Across {int(base.books)} supported state-quarters and {int(base.loans):,} loans, the hybrid's mean Brier improvement was {base['mean']:+.6f} over local (95% block interval {base.ci_low:+.6f} to {base.ci_high:+.6f}) and {broad['mean']:+.6f} over the outside-state rate ({broad.ci_low:+.6f} to {broad.ci_high:+.6f}). Local was closer in {int(high.local_closer)} of {int(high.books)} local-majority calls. Broader was closer in {int(low.pooled_closer)} of {int(low.books)} other calls. This gives {correct} correct choices against {majority} for always choosing the outside-state rate. The hard choice and the continuous hybrid have distinct endpoints.",
+        "![Dutch launch forecasts and geographic choices at Wells Fargo](local_trust_transfer.png)",
+        "[Decision condition and assumptions](../docs/local-trust.md) · [Wells Fargo methods, scenarios and results](../docs/local-trust-bank.md) · [Paired accuracy](local_trust_bank_metrics.csv) · [Economic scenarios](local_trust_bank_policy.csv)",
+    ]
+
+
+def trust_plot(out):
+    frame = pd.read_csv(out / "dutch_trust.csv").sort_values("origin_month")
+    bank = pd.read_csv(out / "local_trust_bank_choices.csv").query("sample == 'matched'").set_index("choice")
+    fig, (left, right) = plt.subplots(1, 2, figsize=(11, 4.05), layout="constrained",
+                                      gridspec_kw={"width_ratios": [1.55, 1]})
+    time = np.arange(len(frame))
+    for col, label, color, style in (("local", "Local at issue", "#9d482b", "-"),
+                                     ("hybrid", "Weighted forecast", "#13746e", "-"),
+                                     ("pooled", "Other countries", "#305b8a", "--")):
+        left.plot(time, 100*frame[col], color=color, ls=style, lw=2, label=label)
+    left.scatter(time, 100*frame.outcome, s=32, color="#23292e", label="Observed later", zorder=3)
+    left.set_xticks(time[::2], frame.origin_month.iloc[::2])
+    left.set_ylim(-1.2, 33)
+    left.set_xlabel("Pilot issue month")
+    left.set_ylabel("Default exposure (%)")
+    left.set_title("Netherlands · eight future books", loc="left", weight="bold", fontsize=12)
+    handles, labels = left.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="outside lower left", ncols=4, frameon=False, fontsize=8)
+    for i, group in enumerate(("local", "pooled")):
+        row = bank.loc[group]
+        percent = 100*row.local_closer/row.books
+        right.barh(i, percent, height=.43, color="#13746e")
+        right.barh(i, 100-percent, left=percent, height=.43, color="#dce4ea")
+        right.text(percent/2, i, f"{row.local_closer:.0f} local", ha="center", va="center", color="white", fontsize=9)
+        right.text((100+percent)/2, i, f"{row.pooled_closer:.0f} broader", ha="center", va="center", color="#243d55", fontsize=9)
+    right.set(xlim=(0,100), ylim=(1.75,-.75), xlabel="Share of state-quarters (%)")
+    right.set_yticks([0,1], ["Local weight > ½","Local weight ≤ ½"], fontsize=9)
+    right.set_xticks([0, 25, 50, 75, 100])
+    right.set_title("Wells Fargo · which rate was closer?", loc="left", weight="bold", fontsize=12)
+    for ax in (left, right):
+        ax.spines[["top","right"]].set_visible(False)
+    left.grid(axis="y", alpha=.16)
+    fig.savefig(out / "local_trust_transfer.png", dpi=170, facecolor="white", metadata={"Software":"Matplotlib"})
+    plt.close(fig)
+
+
 def frequency_sections(out):
     previous = pd.read_csv(out / "frequency_diagnosis_support.csv").set_index("country")
     old = pd.read_csv(out / "frequency_diagnosis.csv").query("country == 'ALL' and period == 'full'")
@@ -457,6 +513,7 @@ def write_report(out, comp):
         *frozen_rule_sections(out),
         *signal_sections(out),
         *frequency_sections(out),
+        *trust_sections(out),
         "## Limits and a three-month follow-up",
         "We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.",
         "[Data provenance](../docs/sources.md) · [Implementation](../docs/algorithm.md) · [Deviations](../docs/deviations.md) · [Simulation](../docs/simulation.md)"
@@ -464,6 +521,7 @@ def write_report(out, comp):
     pilot_forecast_plot(out)
     pilot_signal_plot(out)
     frequency_plot(out)
+    trust_plot(out)
     (out/"report.md").write_text("\n\n".join(sections)+"\n")
 
 

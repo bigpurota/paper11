@@ -1,0 +1,9 @@
+dataset,n_audited,design,audit_rmse,prior_only_rmse
+prosper,10,all_rejects,0.02893694619,0.0003066159906
+prosper,10,policy_rejects,0.008775751279,0.0003066159906
+prosper,50,all_rejects,0.01112669789,0.0003066159906
+prosper,50,policy_rejects,0.003060809915,0.0003066159906
+taiwan,10,all_rejects,0.0454956724,0.01879113246
+taiwan,10,policy_rejects,0.01948503568,0.01879113246
+taiwan,50,all_rejects,0.02007065825,0.01879113246
+taiwan,50,policy_rejects,0.00864804149,0.01879113246

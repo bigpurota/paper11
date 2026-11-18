@@ -1,0 +1,21 @@
+name: Replication checks
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHON: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - name: Unit tests and submitted result checks
+        run: make verify
+      - name: Download sources and rerun both empirical experiments and simulation
+        run: make all OUT=.build/ci-results

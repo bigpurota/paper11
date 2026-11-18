@@ -1,0 +1,3 @@
+dataset,source_rows,population_rows,defaults,first_issued_per_member,missing_default_cycle_first_loans,nonpositive_default_cycle_first_loans,unresolved_default_cycle_first_loans,unique_borrowers
+taiwan,30000,30000,6636,,,,,
+prosper,113937,29263,3455,90827,80,69,149,29263

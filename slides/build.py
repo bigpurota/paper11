@@ -13,7 +13,7 @@ from zipfile import ZipFile
 
 HERE = Path(__file__).resolve().parent
 RESULTS = HERE.parent / "results"
-SOURCES = {"simulation_fig2.png", "calibration.png"}
+SOURCES = {"simulation_fig2.png", "calibration.png", "vintage_forecasts.png", "bounds_frontier.png"}
 TOKEN = re.compile(rb"\{\{([a-z0-9_]+)\}\}")
 NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
@@ -52,7 +52,6 @@ def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
     uncertainty = read_table("uncertainty")
-    eval_rmse = read_table("evaluation_rmse")
     policy = read_table("policy")
     sensitivity = read_table("simulation_comparison")
     audits = read_table("audit_summary")
@@ -77,8 +76,6 @@ def result_fields():
         fields[f"{dataset}_n"] = format(int(one(cohort, dataset=dataset)["population_rows"]), ",")
         guarded = matching(training, dataset=dataset, method="basl_guarded")
         fields[f"{key}_guard"] = percent(statistics.mean(float(r["abr"]) for r in guarded))
-        for label, method in [("low", "bayes_odds_half"), ("high", "bayes_odds_double")]:
-            fields[f"{key}_{label}"] = number(one(eval_rmse, dataset=dataset, method=method, metric="abr")["rmse"])
         selected = matching(policy, dataset=dataset, method="bayes", lgd="0.5")
         for label, metric in [("approval", "test_approval"), ("margin", "profit_per_applicant")]:
             fields[f"{key}_{label}"] = percent(statistics.mean(float(row[metric]) for row in selected))
@@ -97,6 +94,47 @@ def result_fields():
                       ("recovery", "basl_recovery_fraction"), ("guard", "basl_conservative_recovery_fraction")]:
         estimate = one(sensitivity, metric="abr", statistic=stat)["estimate"]
         fields["sim_" + key] = percent(estimate) if key in {"recovery", "guard"} else number(estimate)
+    vintages = read_table("vintage_summary")
+    bayes = one(vintages, method="bayes")
+    fields.update(v_n=bayes["quarters"], v_wins=bayes["quarters_better_than_accepts"])
+    for tag, method in [("a", "accepts"), ("b", "bayes")]:
+        row = one(vintages, method=method)
+        fields["v_h" + tag] = number(row["masking_rmse"])
+        fields["v_f" + tag] = number(row["forecast_rmse"])
+    fields["v_oracle"] = number(one(vintages, method="oracle_history")["forecast_rmse"])
+
+    tipping = read_table("bounds_tipping")
+    bounds = read_table("bounds_summary")
+    for key, ds in [("tw", "taiwan"), ("pr", "prosper")]:
+        radii = [float(r["tipping_gamma"]) for r in matching(tipping, dataset=ds, target="0.5", budget="0")]
+        fields["gamma_" + key] = (f"{min(radii):.2f}–{max(radii):.2f}" if len(radii) > 1
+                                   else f"{radii[0]:.2f}")
+        for label, gamma in [("3", "3"), ("free", "inf")]:
+            selected = one(bounds, dataset=ds, gamma=gamma, budget="0")["mean_target"]
+            fields["gamma_" + key + label] = f"{float(selected):.0%}"
+
+    cells = read_table("rct_cells")
+    contrasts = read_table("rct_contrasts")
+    fields["rct_n"] = format(sum(int(x["n"]) for x in cells), ",")
+    for arm in ["0", "1"]:
+        rows = matching(cells, assigned_offer=arm)
+        fields["rct_n" + arm] = format(sum(int(r["n"]) for r in rows), ",")
+        fields["rct_y" + arm] = format(sum(int(r["funded"]) for r in rows), ",")
+    for tag, estimand, scale in [
+            ("fund", "offer_minus_no_offer_funding", 100.),
+            ("cash", "offer_minus_no_offer_cash_revenue", 1.),
+            ("bothfund", "offer_all_minus_high_only_funding", 100.),
+            ("bothcash", "offer_all_minus_high_only_cash_revenue", 1.)]:
+        row = one(contrasts, estimand=estimand)
+        fields["rct_" + tag] = f"{float(row['estimate']) * scale:+.2f}"
+        fields["rct_" + tag + "ci"] = f"[{float(row['ci_low']) * scale:.2f}, {float(row['ci_high']) * scale:.2f}]"
+    for tag, estimand in [
+            ("short", "principal_shortfall_gt1php_among_funded_if_offer"),
+            ("anyshort", "principal_shortfall_positive_among_funded_if_offer"),
+            ("cashloss", "negative_cash_margin_among_funded_if_offer"),
+            ("free_lo", "all_funded_hypothetical_risk_lower"),
+            ("free_hi", "all_funded_hypothetical_risk_upper")]:
+        fields["rct_" + tag] = percent(one(contrasts, estimand=estimand)["estimate"])
     return fields
 
 
@@ -144,11 +182,11 @@ def main():
     if not office:
         raise SystemExit("Install LibreOffice and make soffice available on PATH to export the PDF.")
     # A private LibreOffice profile also works while a desktop session is open.
-    with tempfile.TemporaryDirectory(dir=HERE) as work:
+    with tempfile.TemporaryDirectory(dir=HERE) as work, tempfile.TemporaryDirectory() as profile:
         tmp = Path(work)
         pptx = tmp / "paper11.pptx"
         refresh_pptx(pptx, result_fields())
-        subprocess.run([office, f"-env:UserInstallation={(tmp / 'profile').as_uri()}", "--headless",
+        subprocess.run([office, f"-env:UserInstallation={Path(profile).as_uri()}", "--headless",
                         "--convert-to", "pdf", "--outdir", str(tmp), str(pptx)], check=True)
         pdf = tmp / "paper11.pdf"
         if not pdf.exists() or not pdf.stat().st_size:

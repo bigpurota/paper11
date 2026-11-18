@@ -60,6 +60,35 @@ def table(frame):
                        *["| "+" | ".join(map(fmt,row))+" |" for row in frame.itertuples(index=False,name=None)]])
 
 
+def extension_sections(out):
+    vintage = pd.read_csv(out/"vintage_summary.csv").copy()
+    for col in ("masking_rmse","forecast_rmse"):
+        vintage[col] *= 100
+    thresholds = pd.read_csv(out/"bounds_tipping.csv")
+    expansion = thresholds[(thresholds.target == .5) & (thresholds.budget == 0)].groupby("dataset").tipping_gamma
+    values = pd.read_csv(out/"rct_contrasts.csv").set_index("estimand")
+    transfer = pd.read_csv(out/"rct_prior_transfer.csv").iloc[0]
+    gain = values.loc["offer_all_minus_high_only_cash_revenue"]
+    funding = values.loc["offer_all_minus_high_only_funding"]
+    lower = values.loc["all_funded_hypothetical_risk_lower","estimate"]
+    upper = values.loc["all_funded_hypothetical_risk_upper","estimate"]
+    return [
+        "## Our extensions",
+        "[What the authors did, what Team 12 added, and how the evidence compares with Paper 15](../docs/contributions.md)",
+        "### Correcting old labels versus predicting the next quarter",
+        table(vintage[["method","quarters","masking_rmse","forecast_rmse","quarters_better_than_accepts"]]),
+        "Both RMSE columns above are in percentage points of integrated ABR. Bayesian evaluation improves historical measurement but produces larger next-quarter RMSE over twelve Prosper cohorts, despite winning in seven individual quarters. The historical oracle uses complete previous outcomes and still experiences temporal transfer error. [Period definitions and error decomposition](../docs/vintages.md)",
+        "![Twelve calendar forecasts](vintage_forecasts.png)",
+        "### Prior sensitivity at a lending decision",
+        f"With 10% interest, 50% LGD and a fixed 30% incumbent, the validation lower bound for the 50% expansion's conditional expected margin stays nonnegative up to an odds multiplier of {expansion.min()['taiwan']:.2f}–{expansion.max()['taiwan']:.2f} in Taiwan and {expansion.min()['prosper']:.2f} on Prosper. Absolute cutoffs are frozen before testing. With unrestricted missing outcomes a zero-downside validation rule retains the incumbent. These are sensitivity endpoints, distinct from sampling confidence intervals. [Definitions, paired gains and held-out results](../docs/bounds.md)",
+        "![Policy selection under bounded uncertainty](bounds_frontier.png)",
+        "### Randomized offers and actual borrowing in the Philippines",
+        f"The analytic extract contains 1,113 marginal applicants. Expanding offers from the high score window to both windows changes the funding rate by {100*funding.estimate:.2f} percentage points and the lender cash margin by {gain.estimate:.2f} PPP dollars per assigned applicant (95% bootstrap interval {gain.ci_low:.2f} to {gain.ci_high:.2f}), before other costs. The result refers to this selected extract under within-window comparability. The underlying experiment was conducted by Karlan and Zinman.",
+        f"The estimated share with a principal shortfall greater than one peso under hypothetical universal funding is only bounded between {100*lower:.2f}% and {100*upper:.2f}% if the non-takers’ repayment is unrestricted. This identified set has a different interpretation from a confidence interval. As a sparse check of a risk prior carried over from the high score window, the observed lower window has {int(transfer.low_events)} shortfalls among {int(transfer.low_funded)} funded borrowers versus {transfer.expected_low_events:.2f} expected. [Assumptions, primary sources and exact rare-event comparison](../docs/rct.md)",
+        "![Philippine randomized offers and partially observed risk](rct_policy.png)",
+    ]
+
+
 def write_report(out, comp):
     sims = pd.read_csv(out/"simulation_comparison.csv")
     train = pd.read_csv(out/"training.csv").groupby(["dataset","method"],as_index=False)[["auc","brier","pauc","abr","lift10"]].mean()
@@ -102,15 +131,16 @@ def write_report(out, comp):
         "The central Bayesian prior is a logit trained only on observed training outcomes. Halving or doubling reject odds leaves the scorecard and its rankings unchanged. It changes which hidden outcomes are assumed when estimating performance. A stronger prior in one cohort can be worse in another. Taiwan RMSE uses four folds; the single chronological Prosper split yields an absolute error.",
         "The complete labels in the validation cohort also allow a retrospective test that removes population transfer. On Taiwan the accepted-only and Bayesian errors are "
         f"{same_cohort.loc['taiwan','accepts']:.4f} and {same_cohort.loc['taiwan','bayes']:.4f}, respectively. On Prosper they are "
-        f"{same_cohort.loc['prosper','accepts']:.4f} and {same_cohort.loc['prosper','bayes']:.4f}. Taiwan's small prospective improvement therefore cannot be attributed solely to correcting selection.",
+        f"{same_cohort.loc['prosper','accepts']:.4f} and {same_cohort.loc['prosper','bayes']:.4f}. Taiwan's small improvement on an independent same-vintage sample therefore cannot be attributed solely to correcting selection.",
         "## Paired uncertainty",table(contrast[cols]),
         "Training comparisons use the same test borrowers under both models. Evaluation-error comparisons assign each borrower one shared Poisson weight wherever it recurs across folds. Intervals are conditional on fitted models and logged decisions. Both empirical intervals for the change in ABR estimation error include zero. Zero conditional policy variance at the base LGD means the methods took the same decisions on these cases.",
         "## Conditional lending policy",table(bp),
         "The entries are margin in units of principal per arriving applicant using an assumed 10% return if repaid. Issuance rates, per-issued-unit margins and numerical cutoffs are in [policy.csv](policy.csv). At 50% LGD all three estimators select the upper end of the allowed rate grid, so the realized difference is exactly zero. The paper’s stated gain in profit depends on its pricing, approval decisions and Spanish borrower population.",
         "## Can a small randomized audit improve ABR measurement?",table(audit),
-        "For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both sampling designs cost the same number of labels. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.",
+        "For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both designs reveal the same number of outcomes. Financial exploration costs may differ. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.",
+        *extension_sections(out),
         "## Limits and a three-month follow-up",
-        "We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. A single later Prosper cohort does not measure the distribution of future economic conditions.",
+        "We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.",
         "[Data provenance](../docs/sources.md) · [Implementation](../docs/algorithm.md) · [Deviations](../docs/deviations.md) · [Simulation](../docs/simulation.md)"
     ]
     (out/"report.md").write_text("\n\n".join(sections)+"\n")

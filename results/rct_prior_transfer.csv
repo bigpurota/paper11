@@ -1,0 +1,2 @@
+prior_source,validation,high_events,high_funded,prior,prior_ci_low,prior_ci_high,low_events,low_funded,expected_low_events,observed_low_rate,low_ci_low,low_ci_high,observed_minus_expected_rate,fisher_two_sided_p
+high_window_funded_after_offer,low_window_funded_after_offer,6,600,0.01,0.003678416446,0.02163795571,2,50,0.5,0.04,0.004881433426,0.1371376256,0.03,0.1205197444

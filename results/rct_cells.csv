@@ -1,0 +1,5 @@
+window,assigned_offer,n,documented_offer_probability,extract_offer_share,funded,cash_losses,residual_gt1php,residual_positive,mean_cash_revenue,mean_principal
+high,0,149,0.85,0.843487395,3,0,0,1,1.168515101,11.74496644
+high,1,803,0.85,0.843487395,600,3,6,34,50.94466765,506.3044832
+low,0,73,0.6,0.5465838509,1,0,0,0,0.8989212329,8.561643836
+low,1,88,0.6,0.5465838509,50,1,2,2,29.85289773,362.9261364

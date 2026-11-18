@@ -9,11 +9,14 @@ export OPENBLAS_NUM_THREADS := 1
 export VECLIB_MAXIMUM_THREADS := 1
 export MPLBACKEND := Agg
 
-.PHONY: all setup data empirical simulation report test verify reproduce slides
+.PHONY: all setup data empirical simulation extensions report test verify reproduce slides
 
 all: setup
 	$(PY) -m paper11.empirical --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.simulation --out "$(OUT)"
+	$(PY) -m paper11.vintages --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.bounds_experiment --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) scripts/report.py --out "$(OUT)"
 	$(PY) scripts/verify.py --out "$(OUT)"
 setup: $(VENV)/.paper11-installed
@@ -28,6 +31,10 @@ empirical: setup
 	$(PY) -m paper11.empirical --out "$(OUT)" --cache "$(CACHE)"
 simulation: setup
 	$(PY) -m paper11.simulation --out "$(OUT)"
+extensions: setup
+	$(PY) -m paper11.vintages --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.bounds_experiment --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 report: setup
 	$(PY) scripts/report.py --out "$(OUT)"
 test: setup

@@ -17,5 +17,5 @@ jobs:
           cache-dependency-path: requirements-lock.txt
       - name: Unit tests and submitted result checks
         run: make verify
-      - name: Download sources and rerun both empirical experiments and simulation
+      - name: Download all three sources and rerun the research pipeline
         run: make all OUT=.build/ci-results

@@ -3,7 +3,7 @@ import numpy as np
 
 
 def randomized_audit(y, observed, score, prior, *, seed, budgets=(10, 50), draws=500):
-    """Compare equal-cost designs for a *fixed* 30% policy on the validation cohort.
+    """Compare equal-sized label samples for a *fixed* 30% policy on the validation cohort.
 
     The audit officer may reveal outcomes only for sampled, historically declined
     accounts. The full truth is used only as a reference after estimating.

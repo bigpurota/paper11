@@ -70,7 +70,7 @@ The diagonal represents perfect calibration. Each point represents an equal-freq
 
 The central Bayesian prior is a logit trained only on observed training outcomes. Halving or doubling reject odds leaves the scorecard and its rankings unchanged. It changes which hidden outcomes are assumed when estimating performance. A stronger prior in one cohort can be worse in another. Taiwan RMSE uses four folds; the single chronological Prosper split yields an absolute error.
 
-The complete labels in the validation cohort also allow a retrospective test that removes population transfer. On Taiwan the accepted-only and Bayesian errors are 0.0059 and 0.0179, respectively. On Prosper they are 0.0113 and 0.0013. Taiwan's small prospective improvement therefore cannot be attributed solely to correcting selection.
+The complete labels in the validation cohort also allow a retrospective test that removes population transfer. On Taiwan the accepted-only and Bayesian errors are 0.0059 and 0.0179, respectively. On Prosper they are 0.0113 and 0.0013. Taiwan's small improvement on an independent same-vintage sample therefore cannot be attributed solely to correcting selection.
 
 ## Paired uncertainty
 
@@ -115,10 +115,41 @@ The entries are margin in units of principal per arriving applicant using an ass
 | taiwan | 50 | all_rejects | 0.0201 | 0.0188 |
 | taiwan | 50 | policy_rejects | 0.0086 | 0.0188 |
 
-For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both sampling designs cost the same number of labels. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.
+For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both designs reveal the same number of outcomes. Financial exploration costs may differ. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.
+
+## Our extensions
+
+[What the authors did, what Team 12 added, and how the evidence compares with Paper 15](../docs/contributions.md)
+
+### Correcting old labels versus predicting the next quarter
+
+| method | quarters | masking_rmse | forecast_rmse | quarters_better_than_accepts |
+|---|---|---|---|---|
+| accepts | 12 | 0.7856 | 2.0751 | 0 |
+| bayes | 12 | 0.2614 | 2.3566 | 7 |
+| ipw | 12 | 0.1698 | 2.3915 | 7 |
+| oracle_history | 12 | 0.0000 | 2.2677 | 7 |
+
+Both RMSE columns above are in percentage points of integrated ABR. Bayesian evaluation improves historical measurement but produces larger next-quarter RMSE over twelve Prosper cohorts, despite winning in seven individual quarters. The historical oracle uses complete previous outcomes and still experiences temporal transfer error. [Period definitions and error decomposition](../docs/vintages.md)
+
+![Twelve calendar forecasts](vintage_forecasts.png)
+
+### Prior sensitivity at a lending decision
+
+With 10% interest, 50% LGD and a fixed 30% incumbent, the validation lower bound for the 50% expansion's conditional expected margin stays nonnegative up to an odds multiplier of 1.85–2.30 in Taiwan and 13.19 on Prosper. Absolute cutoffs are frozen before testing. With unrestricted missing outcomes a zero-downside validation rule retains the incumbent. These are sensitivity endpoints, distinct from sampling confidence intervals. [Definitions, paired gains and held-out results](../docs/bounds.md)
+
+![Policy selection under bounded uncertainty](bounds_frontier.png)
+
+### Randomized offers and actual borrowing in the Philippines
+
+The analytic extract contains 1,113 marginal applicants. Expanding offers from the high score window to both windows changes the funding rate by 8.02 percentage points and the lender cash margin by 4.19 PPP dollars per assigned applicant (95% bootstrap interval 3.02 to 5.45), before other costs. The result refers to this selected extract under within-window comparability. The underlying experiment was conducted by Karlan and Zinman.
+
+The estimated share with a principal shortfall greater than one peso under hypothetical universal funding is only bounded between 0.97% and 28.84% if the non-takers’ repayment is unrestricted. This identified set has a different interpretation from a confidence interval. As a sparse check of a risk prior carried over from the high score window, the observed lower window has 2 shortfalls among 50 funded borrowers versus 0.50 expected. [Assumptions, primary sources and exact rare-event comparison](../docs/rct.md)
+
+![Philippine randomized offers and partially observed risk](rct_policy.png)
 
 ## Limits and a three-month follow-up
 
-We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. A single later Prosper cohort does not measure the distribution of future economic conditions.
+We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.
 
 [Data provenance](../docs/sources.md) · [Implementation](../docs/algorithm.md) · [Deviations](../docs/deviations.md) · [Simulation](../docs/simulation.md)

@@ -1,10 +1,8 @@
 # Fighting Sampling Bias in Credit Scoring
 
-**Andrey Tsember — implementation and computational experiments**
-
 HSE DSBA Research Seminar · Team 12 · Round 3 · Paper 11
 
-Team 12: **Andrey Tsember**, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.
+Team 12: Andrey Tsember (scoring models, experiments and reproducible build), Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.
 
 We independently implement the central methods in [Kozodoi et al., assigned preprint and appendix](https://arxiv.org/abs/2407.13009v1), published in [European Journal of Operational Research](https://www.sciencedirect.com/science/article/pii/S0377221725000839). When a lender observes repayment only after approving an application, how well can it train a scorecard and measure risk among all applicants?
 
@@ -24,6 +22,14 @@ The simulation supports the paper's main mechanism. The empirical evidence is mi
 ![Published and reproduced Figure 2](results/simulation_fig2.png)
 
 ## What did we add?
+
+### Which missing outcomes would change the bank's decision?
+
+Take the first Taiwan validation split. A 30% to 50% expansion would add 1,200 borrowers. At 10% interest and 50% loss given default, the expansion earns a positive incremental margin if **at most 218 of the 1,200 default**. Consider two completions of the archive. They agree on every observed repayment and on the same 699 hidden defaults, with the true count preserved in each of ten groups ranked by predicted risk. Allocating those defaults differently *within* groups produces **120** versus **315** defaults among the extra approvals. The very same group totals support **+0.900** and **−0.888** percentage points of scenario margin per applicant. Only the ten retrospective totals are disclosed in this thought experiment. Individual hidden repayments stay unknown. In the Prosper cohort, knowing its ten true counts does establish a positive margin (range **+0.195 to +1.468 pp**). The project also compares five policies under minimax regret. [Constructed worlds and proof](docs/identification.md)
+
+What information would settle the sign? On Prosper, 160 repayments were hidden among the extra approvals. An audit randomly reveals them and checks a fixed set of sample sizes. With the 17 defaults that actually occurred, it needs **14.46 labels on average**. At 77 or 78 defaults, just either side of break-even, it needs **about 153 of 160**. The chance of declaring the wrong sign is bounded by 5% for each fixed cohort. These are expected counts conditional on the hidden truth and concern a fixed pair of cutoffs. [Exact audit and limits](docs/decision-audit.md)
+
+### Further experiments
 
 1. **Twelve calendar forecasts.** Did removing selection bias from historical evaluation improve next-quarter risk forecasts? On Prosper, historical estimation RMSE fell from **0.79 to 0.26 percentage points**, but next-quarter forecast RMSE rose from **2.08 to 2.36**. The sign survives removing any one quarter. [Forecasts and decomposition](docs/vintages.md)
 2. **A decision that accounts for unknown repayments.** We identify which 30%→50% expansions retain a nonnegative worst-case conditional expected margin as reject default odds depart from the prior. The tipping multiplier is **1.85–2.30** across Taiwan splits and **13.19** on Prosper. With unrestricted outcomes and zero downside allowance both cohorts retain the 30% incumbent. [Policy bounds](docs/bounds.md)
@@ -61,6 +67,7 @@ make reproduce    # second run in an empty output directory; compare every resea
 |---|---|
 | [Methods](src/paper11/methods.py) | BASL, Monte Carlo Bayesian evaluation, weighted metrics, tail ties, baselines |
 | [Empirical pipeline](src/paper11/empirical.py) | Honest splits, threshold selection, paired intervals and calibration |
+| [Policy identification](src/paper11/identification.py) · [Sequential decision audit](src/paper11/decision_audit.py) | Indistinguishable outcomes, minimax regret and exact stopping probabilities |
 | [Quarterly forecasts](src/paper11/vintages.py) · [Policy bounds](src/paper11/bounds.py) · [Field experiment](src/paper11/rct.py) | Time transfer, partial identification and observed offer outcomes |
 | [Audit design](src/paper11/audit_design.py) | Randomized audits with equal numbers of labels and residual correction |
 | [Simulation](src/paper11/simulation.py) | Gaussian mixtures, feedback loop, holdout truth and Figure 2 |
@@ -68,4 +75,4 @@ make reproduce    # second run in an empty output directory; compare every resea
 | [Analysis plan](docs/analysis-plan.md) · [Deviations](docs/deviations.md) | Decisions before fitting, changes after inspection, limitations |
 | [Assessment and checks](docs/verification.md) | Course evidence, test scope and independent rerun |
 
-The implementation and empirical pipeline were developed by **Andrey Tsember** with Codex assistance. The paper's algorithms and original Monedo results are credited to Kozodoi and coauthors.
+The code and verification suite were developed with Codex assistance. Kozodoi and coauthors developed the paper’s algorithms and produced the original Monedo results.

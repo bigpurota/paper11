@@ -72,8 +72,16 @@ def extension_sections(out):
     funding = values.loc["offer_all_minus_high_only_funding"]
     lower = values.loc["all_funded_hypothetical_risk_lower","estimate"]
     upper = values.loc["all_funded_hypothetical_risk_upper","estimate"]
+    ident = pd.read_csv(out/"identification_summary.csv")
+    group_counts = ident[(ident.grid == "two") & (ident.constraint == "oracle_decile_totals")].set_index("dataset")
+    audit = pd.read_csv(out/"decision_audit_summary.csv")
+    prosper = audit[audit.dataset == "prosper"].set_index("scenario")
     return [
         "## Our extensions",
+        "### Can the archive identify which policy earns more?",
+        f"Hold all visible outcomes fixed. Grant access to the actual number of defaults in each of ten groups of hidden applicants ranked by the frozen prior. The grouping is fixed before reading the true aggregate counts. On Taiwan, moving these same defaults within groups yields both negative and positive gains for the same 30% to 50% expansion in every split. The mean bounds are {100*group_counts.loc['taiwan','gain_30_to_50_lower']:+.2f} to {100*group_counts.loc['taiwan','gain_30_to_50_upper']:+.2f} pp of scenario margin per applicant. On Prosper these ten true counts are sufficient to determine a positive sign ({100*group_counts.loc['prosper','gain_30_to_50_lower']:+.2f} to {100*group_counts.loc['prosper','gain_30_to_50_upper']:+.2f} pp). These aggregates use retrospective information unavailable to the original lender. A second sensitivity case substitutes counts obtained by rounding the prior probabilities. We also solve the minimax-regret choice among five cutoffs and audit the frozen rule on holdout. [Construction, proof and results](../docs/identification.md)",
+        "### What would it take to resolve the decision?",
+        f"For the Prosper validation pool, {int(prosper.loc['retrospective_truth','hidden'])} repayments among the additional approvals were hidden. In the retrospective truth, {int(prosper.loc['retrospective_truth','hidden_defaults'])} defaulted. The exact random-order audit uses {prosper.loc['retrospective_truth','mean_labels']:.2f} labels on average. At the last profitable and first unprofitable hidden default counts it uses {prosper.loc['last_profitable','mean_labels']:.2f} and {prosper.loc['first_unprofitable','mean_labels']:.2f}. The prespecified review schedule bounds wrong-direction decisions by 5% for each fixed population. The required sample depends on how close that population is to break-even. [Stopping boundaries, proof, and sample-size distributions](../docs/decision-audit.md)",
         "[What the authors did, what Team 12 added, and how the evidence compares with Paper 15](../docs/contributions.md)",
         "### Correcting old labels versus predicting the next quarter",
         table(vintage[["method","quarters","masking_rmse","forecast_rmse","quarters_better_than_accepts"]]),
@@ -113,7 +121,7 @@ def write_report(out, comp):
     cols = ["dataset","contrast","estimate","ci_low","ci_high"]
     sections = [
         "# Team 12 · Fighting Sampling Bias",
-        "**Implementation and computational experiments · Andrey Tsember**\n\nTeam 12 · Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.",
+        "Team 12 · Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.",
         "This report uses the assigned preprint and public borrower records. An approval scorecard is needed for everyone who applies, while repayment is usually observed only for the people actually financed. Training with inferred labels and evaluating on the complete applicant mix solve different problems.",
         "## Synthetic replication of Figure 2",
         table(gap[["statistic","paper_value","estimate","ci_low","ci_high"]]),

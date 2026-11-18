@@ -1,0 +1,25 @@
+# How many repayments would resolve a proposed expansion?
+
+This follow-up was designed after inspecting the earlier 30% versus 50% bounds. The fixed question is whether expansion earns a strictly positive incremental scenario margin on the *same finite validation population*. We reveal outcomes of a simple random sample without replacement from previously masked applicants who change decision. The public datasets contain the underlying outcomes because these borrowers were originally financed. A live bank would need funded exploration, actual take-up and mature repayment outcomes to make comparable observations.
+
+The two cutoffs, loan payoff (10% interest and 50% loss given default), target sign and review schedule are fixed before opening any of those masked outcomes. At 10, 25, 50, 100 and 200 revealed labels below the pool size we test both directions. The final look is a census. An interim approval of the expansion or a decision to keep the incumbent is final. A lender who has reached a smaller budget without a signal records the decision as unresolved. We use a per-direction familywise error bound of 5% for this single comparison on each fold. Results for every true count are interpreted conditionally on the fixed cohort and on simple random audit order.
+
+## Which outcomes can change the answer?
+
+Write S for the number of extra approvals, D for the already observed defaults among them, M for the number of missing outcomes among them and K for the unknown number of defaults in those M. Everyone else has the same decision under both policies and cancels. In units of principal the additional total margin is 0.10 S − 0.55 (D + K). It is strictly positive exactly when K ≤ h, where h = floor((2S−1)/11) − D. An exact break-even goes to the incumbent. If h < 0 or h ≥ M, the visible records already settle the answer.
+
+After n random reveals, the observed audit default count has the hypergeometric distribution with population M and K defaults. To support expansion, test the least unfavorable null count h+1 with a lower-tail probability. To support retaining the incumbent, test the largest profitable count h with an upper-tail probability. Hypergeometric counts increase stochastically with K, so these boundary cases control the corresponding composite hypotheses. At each of J interim looks use 0.05/J for each tail. For any fixed K, only one direction is wrong. Summing its tail probabilities over J looks bounds the chance of ever making that wrong declaration by 5%. At a census the decision is exact. Stopping outside the specified review schedule would require another procedure. This is a simple group-sequential use of exact sampling-without-replacement inference. [Waudby-Smith and Ramdas on sequential finite-population inference](https://arxiv.org/abs/2006.04347)
+
+## What the retrospective audit shows
+
+| Validation population | Known before auditing | Hidden truth used to evaluate the protocol | Expected number of labels to a decision |
+|---|---|---|---:|
+| Taiwan, four splits | 1,200 additional approvals per split, 350–364 missing labels | 41–50 defaults among those missing | 48.22–56.18 |
+| Prosper | 579 additional approvals, 28 known defaults, 160 missing labels | 17 defaults among those missing | 14.46 |
+| Same Prosper records at the decision boundary | Same 579, 28 and 160 | 77 hidden defaults (barely profitable) or 78 (unprofitable) | 152.89 or 153.02 |
+
+A bank standing at the start sees the same decision boundary in the last two rows. It does not know which sample size to expect without an assumption about K. On the realized Prosper count the approval decision was resolved by 50 labels for every possible audit order. At either boundary count more than 95% of audit orders were unresolved after 50. All values average over the exact distribution of uniformly random reveal orders, conditional on the stated count. The computation propagates probability mass through successive draws and removes paths the first time they reach a stopping boundary. It does not approximate the operating characteristics by Monte Carlo.
+
+The separate [two-world experiment](identification.md) asks what could be learned from using only the archive and ten risk-group totals, whether predicted or disclosed after the fact. This audit uses individual newly revealed labels, with no group totals or model prior. The earlier [targeted label experiment](../results/audit_summary.csv) asks how accurately 50 labels can estimate a default rate. Here the endpoint is the **sign of a specific policy change**, so an unresolved decision at a fixed budget is a meaningful outcome. This design controls error for a single fixed comparison on a given cohort. Costs of acquiring or funding a real observation, refusal to take a loan, and transport to future cohorts need separate evidence.
+
+[Per-cohort counts, expected labels and error probabilities](../results/decision_audit_summary.csv) · [Exact stopping probabilities and review thresholds](../results/decision_audit_paths.csv) · [Implementation](../src/paper11/decision_audit.py) · [Independent exhaustive tests](../tests/test_decision_audit.py)

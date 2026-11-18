@@ -1,6 +1,6 @@
 # Follow-up design, 18 November 2026
 
-Implementation and experiments: Andrey Tsember. These extensions were designed after the initial replication and its public-cohort results were known. The initial release is commit 54af173. The additional comparisons are exploratory.
+These extensions were designed after the initial replication and its public-cohort results were known. The initial release is commit 54af173. The additional comparisons are exploratory.
 
 ## How much forecast error comes from selection versus time?
 

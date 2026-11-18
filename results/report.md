@@ -1,7 +1,5 @@
 # Team 12 · Fighting Sampling Bias
 
-**Implementation and computational experiments · Andrey Tsember**
-
 Team 12 · Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.
 
 This report uses the assigned preprint and public borrower records. An approval scorecard is needed for everyone who applies, while repayment is usually observed only for the people actually financed. Training with inferred labels and evaluating on the complete applicant mix solve different problems.
@@ -118,6 +116,14 @@ The entries are margin in units of principal per arriving applicant using an ass
 For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both designs reveal the same number of outcomes. Financial exploration costs may differ. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.
 
 ## Our extensions
+
+### Can the archive identify which policy earns more?
+
+Hold all visible outcomes fixed. Grant access to the actual number of defaults in each of ten groups of hidden applicants ranked by the frozen prior. The grouping is fixed before reading the true aggregate counts. On Taiwan, moving these same defaults within groups yields both negative and positive gains for the same 30% to 50% expansion in every split. The mean bounds are -0.82 to +0.99 pp of scenario margin per applicant. On Prosper these ten true counts are sufficient to determine a positive sign (+0.20 to +1.47 pp). These aggregates use retrospective information unavailable to the original lender. A second sensitivity case substitutes counts obtained by rounding the prior probabilities. We also solve the minimax-regret choice among five cutoffs and audit the frozen rule on holdout. [Construction, proof and results](../docs/identification.md)
+
+### What would it take to resolve the decision?
+
+For the Prosper validation pool, 160 repayments among the additional approvals were hidden. In the retrospective truth, 17 defaulted. The exact random-order audit uses 14.46 labels on average. At the last profitable and first unprofitable hidden default counts it uses 152.89 and 153.02. The prespecified review schedule bounds wrong-direction decisions by 5% for each fixed population. The required sample depends on how close that population is to break-even. [Stopping boundaries, proof, and sample-size distributions](../docs/decision-audit.md)
 
 [What the authors did, what Team 12 added, and how the evidence compares with Paper 15](../docs/contributions.md)
 

@@ -16,6 +16,8 @@ def run(reference, cache):
         for command in (["-m","paper11.empirical","--cache",str(cache)], ["-m","paper11.simulation"],
                         ["-m","paper11.vintages","--cache",str(cache)],
                         ["-m","paper11.bounds_experiment","--cache",str(cache)],
+                        ["-m","paper11.identification","--cache",str(cache)],
+                        ["-m","paper11.decision_audit","--cache",str(cache)],
                         ["-m","paper11.rct","--cache",str(cache)],
                         ["scripts/report.py"], ["scripts/verify.py"]):
             subprocess.run([sys.executable,*command,"--out",tmp],env=env,check=True)

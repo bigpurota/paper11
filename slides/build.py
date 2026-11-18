@@ -48,6 +48,52 @@ def signed(x):
     return f"{float(x) * 100:+.2f}"
 
 
+def decision_fields():
+    worlds = matching(read_table("identification_worlds"), grid="two", constraint="oracle_decile_totals")
+    histories = matching(worlds, dataset="taiwan", fold=1)
+    low_defaults = one(histories, witness_for="0.5")
+    high_defaults = one(histories, witness_for="0.3")
+    for key in ("n", "n_observed", "observed_defaults", "hidden_defaults",
+                "hidden_defaults_by_prior_decile", "changed_cases"):
+        if low_defaults[key] != high_defaults[key]:
+            raise ValueError(f"Taiwan witness worlds disagree on {key}")
+
+    def margin_pp(raw, places=3):
+        return f"{float(raw) * 100:+.{places}f}".replace("-", "−")
+
+    folds = {r["fold"] for r in matching(worlds, dataset="taiwan")}
+    intervals = [[float(r["change_30_to_50"]) for r in matching(worlds, dataset="taiwan", fold=fold)]
+                 for fold in folds]
+    summary = read_table("identification_summary")
+    prosper = one(summary, dataset="prosper", grid="two", constraint="oracle_decile_totals")
+    fields = {
+        "world_seen": f"{int(low_defaults['n_observed']):,}",
+        "world_hidden": low_defaults["hidden_defaults"],
+        "world_counts": ", ".join(low_defaults["hidden_defaults_by_prior_decile"].split()),
+        "world_switch": f"{int(low_defaults['changed_cases']):,}",
+        "world_low_d": low_defaults["changed_defaults"],
+        "world_high_d": high_defaults["changed_defaults"],
+        "world_high_gain": margin_pp(low_defaults["change_30_to_50"]),
+        "world_low_gain": margin_pp(high_defaults["change_30_to_50"], 4),
+        "world_ambig": str(sum(min(values) < 0 < max(values) for values in intervals)),
+        "world_folds": str(len(folds)),
+        "world_pr_lo": margin_pp(prosper["gain_30_to_50_lower"]),
+        "world_pr_hi": margin_pp(prosper["gain_30_to_50_upper"]),
+    }
+    for prefix, ds in [("tw", "taiwan"), ("pr", "prosper")]:
+        best = one(summary, dataset=ds, grid="five", constraint="unrestricted")
+        for label, key in [("pure", "worst_deterministic"), ("mix", "worst_lottery")]:
+            fields[f"regret_{prefix}_{label}"] = f"{100 * float(best[key]):.3f}"
+    audit = matching(read_table("decision_audit_summary"), dataset="prosper", fold=1)
+    for prefix, scenario in [("real", "retrospective_truth"), ("prof", "last_profitable"),
+                             ("loss", "first_unprofitable")]:
+        row = one(audit, scenario=scenario)
+        fields[f"audit_{prefix}_k"] = row["hidden_defaults"]
+        fields[f"audit_{prefix}_n"] = f"{float(row['mean_labels']):.2f}"
+    fields["audit_hidden"] = one(audit, scenario="retrospective_truth")["hidden"]
+    return fields
+
+
 def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
@@ -56,7 +102,7 @@ def result_fields():
     sensitivity = read_table("simulation_comparison")
     audits = read_table("audit_summary")
     cohort = read_table("cohort")
-    fields = {}
+    fields = decision_fields()
     for key, dataset in [("orig", "monedo"), ("tw", "taiwan"), ("pr", "prosper")]:
         for label, method in [("a", "accepts"), ("i", "ipw"), ("b", "bayes")]:
             fields[f"{key}_eval_{label}"] = number(one(comparison, table=2, method=method, metric="abr")[dataset])

@@ -48,6 +48,58 @@ def verify_extensions(out):
         assert (out / figure).read_bytes().startswith(bytes.fromhex("89504e470d0a1a0a"))
 
 
+
+def verify_identification_and_audit(out):
+    worlds = pd.read_csv(out / "identification_worlds.csv")
+    grid = worlds[(worlds.grid == "two") & (worlds.constraint != "unrestricted")]
+    assert len(grid) == 20
+    assert (grid.oracle_audit_only == grid.constraint.eq("oracle_decile_totals")).all()
+    for _, pair in grid.groupby(["dataset", "fold", "constraint"]):
+        assert len(pair) == 2
+        for col in ("n_observed", "observed_defaults", "hidden_defaults_by_prior_decile"):
+            assert pair[col].nunique() == 1
+        assert_allclose(pair.change_30_to_50, (.10*pair.changed_cases - .55*pair.changed_defaults) / pair.n)
+    deciles = pd.read_csv(out / "identification_deciles.csv")
+    assert len(deciles) == 50
+    # Counts alone pin down both endpoints within each prior band.
+    min_hidden = np.maximum(0, deciles.oracle_hidden_defaults - (deciles.hidden_cases - deciles.hidden_switchers))
+    max_hidden = np.minimum(deciles.hidden_switchers, deciles.oracle_hidden_defaults)
+    assert_allclose(min_hidden, deciles.min_hidden_switcher_defaults)
+    assert_allclose(max_hidden, deciles.max_hidden_switcher_defaults)
+    actual = grid[grid.oracle_audit_only]
+    for (dataset, fold), bands in deciles.groupby(["dataset", "fold"]):
+        assert bands.prior_decile.nunique() == 10
+        endpoints = actual[(actual.dataset == dataset) & (actual.fold == fold)].changed_defaults
+        known = bands.known_switcher_defaults_fold.iloc[0]
+        assert known + bands.min_hidden_switcher_defaults.sum() == endpoints.min()
+        assert known + bands.max_hidden_switcher_defaults.sum() == endpoints.max()
+
+    policies = pd.read_csv(out / "identification_policies.csv")
+    groups = policies.groupby(["dataset", "fold", "grid", "constraint"])
+    assert_allclose(groups.lottery_weight.sum(), 1., atol=1e-9)
+    assert (policies.worst_lottery <= policies.worst_deterministic + 1e-10).all()
+    assert (policies.lottery_weight >= 0).all()
+    assert groups.pure_choice.sum().eq(1).all()
+    paths = pd.read_csv(out / "decision_audit_paths.csv")
+    audit = pd.read_csv(out / "decision_audit_summary.csv")
+    assert len(audit) == 15
+    oracle = grid[grid.oracle_audit_only].groupby(["dataset", "fold"]).changed_defaults
+    truth = audit[audit.scenario == "retrospective_truth"].set_index(["dataset", "fold"])
+    realized = truth.visible_defaults + truth.hidden_defaults
+    assert realized.between(oracle.min().reindex(realized.index), oracle.max().reindex(realized.index)).all()
+    for row in audit.itertuples():
+        sub = paths[(paths.dataset == row.dataset) & (paths.fold == row.fold) &
+                    (paths.scenario == row.scenario)].sort_values("labels")
+        first_stop = sub.first_expand + sub.first_retain
+        assert_allclose(1 - first_stop.cumsum(), sub.unresolved, atol=1e-10)
+        assert_allclose((first_stop * sub.labels).sum(), row.mean_labels, atol=1e-8)
+        assert_allclose(first_stop.sum(), 1., atol=1e-10)
+        assert (2 * row.switchers > 11 * (row.visible_defaults + row.hidden_defaults)) == row.expand_profitable
+        wrong = sub.first_retain if row.expand_profitable else sub.first_expand
+        assert_allclose(wrong.sum(), row.p_wrong, atol=1e-10)
+        assert row.p_wrong <= .05 + 1e-10
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -91,7 +143,8 @@ def verify(out):
         delta = by_model.loc[(ds,"basl"),"abr"]-by_model.loc[(ds,"accepts"),"abr"]
         assert_allclose(diff.loc[(ds,"basl_minus_accepts_abr"),"estimate"],delta,atol=1e-9)
     verify_extensions(out)
-    print("PASS: rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
+    verify_identification_and_audit(out)
+    print("PASS: equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
 if __name__ == "__main__":

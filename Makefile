@@ -16,6 +16,8 @@ all: setup
 	$(PY) -m paper11.simulation --out "$(OUT)"
 	$(PY) -m paper11.vintages --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.bounds_experiment --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.identification --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.decision_audit --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) scripts/report.py --out "$(OUT)"
 	$(PY) scripts/verify.py --out "$(OUT)"
@@ -34,6 +36,8 @@ simulation: setup
 extensions: setup
 	$(PY) -m paper11.vintages --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.bounds_experiment --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.identification --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.decision_audit --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 report: setup
 	$(PY) scripts/report.py --out "$(OUT)"

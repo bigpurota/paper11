@@ -33,3 +33,17 @@ def test_tied_index_values_stay_on_one_side():
         assert group.all() or not group.any()
     shares = [(index >= v).mean() for v in np.unique(index)]
     assert abs(hard.accepted.mean() - soft.accepted.mean()) == min(abs(s - soft.accepted.mean()) for s in shares)
+
+
+def test_prior_diagnostics_report_level_and_ranking_on_validation_rejects():
+    from paper11.hard_selection import prior_diagnostics
+    rng = np.random.default_rng(5)
+    index = rng.normal(size=3000)
+    pop = population(index)
+    rows = rng.permutation(len(index))
+    pop.splits = [(rows[:1500], rows[1500:1800], rows[1800:2400], rows[2400:])]
+    out = prior_diagnostics(harden(pop))
+    assert set(out) == {"reject_prior_mean", "reject_bad_rate_validation", "reject_prior_auc"}
+    assert all(0 <= v <= 1 for v in out.values())
+    rejected = pop.splits[0][2][~harden(pop).accepted[pop.splits[0][2]]]
+    assert np.isclose(out["reject_bad_rate_validation"], pop.y[rejected].mean())

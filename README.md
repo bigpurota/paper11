@@ -11,7 +11,7 @@ A bank observes repayment only for the loans it approves, yet its scorecard must
 ## In short
 
 * **The simulation replicates.** Bayesian evaluation cuts the error in estimating the approved bad rate from 24.33 to 7.71 percentage points (paper: 20.10 to 9.29). BASL recovers 29.6% of the gap to full-label training, with a 95% interval of 21.2–37.3% that contains the paper's 24.8%.
-* **On public data the evaluation idea holds and the training idea does not.** With a hard historical cutoff, Bayesian evaluation lowers Taiwan's error by 0.93 points (95% interval 0.66 to 1.19). BASL never lowered defaults, and under the hard cutoff it raised Taiwan's by 2.97 points.
+* **On public data the evaluation idea holds and the training idea does not.** With a hard historical cutoff, Bayesian evaluation lowers Taiwan's error by 0.93 points (95% interval 0.66 to 1.19). BASL never lowered defaults, and under the hard cutoff it raised Taiwan's in all four folds, by 2.97 points on average.
 * **Only outcomes that can change a decision matter.** Two approval cutoffs differ only on the borrowers between them. Outcome totals for those bands identify all 50 policy differences on our cohorts; totals by risk decile identify none.
 * **A loss-making pilot loan pays only through later decisions.** In our example it pays back after three later loans if risk persists and never if risk resets 10% of the time. A rule chosen in advance missed the only later recovery.
 * **Simple pooled rates are hard to beat.** Early defaults changed lending decisions in Dutch and Czech replays, but at the base margins the rate from other regions earned as much or more in both, and half of the correct Dutch warnings came from offsetting errors.
@@ -22,11 +22,13 @@ The paper's randomized Monedo holdout is private. Our Taiwan and Prosper tests h
 
 | Quantity | Paper | Ours |
 |---|---:|---:|
-| Simulation: approved bad-rate estimation error, accepted-only → Bayesian | 0.2010 → 0.0929 | 0.2433 → 0.0771 |
+| Simulation: error in the estimated approved bad rate, accepted-only → Bayesian | 20.10 → 9.29 pp | 24.33 → 7.71 pp |
 | Simulation: share of the full-label gap recovered by BASL | 24.82% | 29.61% [21.22%, 37.28%] |
-| Real data: estimation error, accepted-only → Bayesian | 0.0356 → 0.0130 (Monedo) | Taiwan 0.0143 → 0.0135 (soft) and 0.0327 → 0.0233 (hard cutoff); Prosper 0.0135 → 0.0035 (soft) and 0.0143 → 0.0050 (hard) |
-| Real data: approved bad rate, accepted-only → BASL | 0.2388 → 0.2211 (Monedo) | Taiwan +0.16 pp (soft) and +2.97 pp (hard); Prosper +0.01 pp (soft) and +0.14 pp (hard) |
-| Profit from choosing the cutoff by Bayesian evaluation | +$29.27 per $375 loan at 50% LGD | No difference: every evaluator chose the same cutoff |
+| Real data: same error, accepted-only → Bayesian | Monedo 3.56 → 1.30 pp | Taiwan 1.43 → 1.35 pp (soft), 3.27 → 2.33 pp (hard cutoff); Prosper 1.35 → 0.35 pp (soft), 1.43 → 0.50 pp (hard) |
+| Real data: approved bad rate, accepted-only → BASL | Monedo 23.88% → 22.11% | Taiwan 7.20% → 7.37% (soft), 8.53% → 11.50% (hard); Prosper 3.40% → 3.41% (soft), 3.62% → 3.77% (hard) |
+| Profit from choosing the cutoff by Bayesian evaluation | +$29.27 per $375 loan at 50% LGD | No difference at 50% LGD: every evaluator chose the same cutoff |
+
+"Soft" gives every applicant a 5–95% chance of approval; "hard" accepts by a cutoff on the same index. Errors are root mean squared errors in percentage points (pp).
 
 ![Published and reproduced Figure 2](results/simulation_fig2.png)
 

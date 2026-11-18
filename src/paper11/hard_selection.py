@@ -12,6 +12,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.special import logit
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from .data import load_population
 from .empirical import evaluation_uncertainty, paired_uncertainty, run_fold
@@ -37,6 +42,26 @@ def selection_profile(pop):
                 bad_rate_rejected=pop.y[~a].mean())
 
 
+def prior_diagnostics(pop):
+    """How the accepts-trained logistic prior describes validation rejects: level and ranking.
+
+    The model matches the main experiment's prior; BASL's pseudo-labeler is a logistic
+    model of the same kind. Results are averaged over splits.
+    """
+    level, actual, ranking = [], [], []
+    for fit, _, val, _ in pop.splits:
+        imputer = SimpleImputer(strategy="median", keep_empty_features=True).fit(pop.X[fit])
+        X = imputer.transform(pop.X)
+        accepted, rejected = fit[pop.accepted[fit]], val[~pop.accepted[val]]
+        model = make_pipeline(StandardScaler(), LogisticRegression(C=1., max_iter=1500))
+        prior = model.fit(X[accepted], pop.y[accepted]).predict_proba(X[rejected])[:, 1]
+        level.append(prior.mean())
+        actual.append(pop.y[rejected].mean())
+        ranking.append(roc_auc_score(pop.y[rejected], prior))
+    return dict(reject_prior_mean=np.mean(level), reject_bad_rate_validation=np.mean(actual),
+                reject_prior_auc=np.mean(ranking))
+
+
 def run(out, cache):
     out.mkdir(parents=True, exist_ok=True)
     rows, training = [], []
@@ -44,8 +69,8 @@ def run(out, cache):
         soft = load_population(dataset, cache)
         pop = harden(soft)
         for design, frame in (("soft", soft), ("hard", pop)):
-            rows.extend(dict(dataset=dataset, design=design, quantity=k, estimate=v)
-                        for k, v in selection_profile(frame).items())
+            profile = {**selection_profile(frame), **prior_diagnostics(frame)}
+            rows.extend(dict(dataset=dataset, design=design, quantity=k, estimate=v) for k, v in profile.items())
         paired, inputs, evaluation = [], [], []
         for fold, split in enumerate(pop.splits, 1):
             print(f"{dataset}: hard cutoff, split {fold}/{len(pop.splits)}", flush=True)

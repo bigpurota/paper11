@@ -533,6 +533,9 @@ def hard_selection_section(out):
             rows.append([NAMES[dataset], design, f"{100 * get(design, 'accepted_share'):.1f}%",
                          f"{100 * get(design, 'bad_rate_accepted'):.1f}% / {100 * get(design, 'bad_rate_rejected'):.1f}%",
                          f"{100 * ev[0]:.2f} → {100 * ev[1]:.2f}", f"{100 * tr[0]:.2f}% → {100 * tr[1]:.2f}%"])
+    def diag(quantity):
+        return h[(h.dataset == "taiwan") & (h.design == "hard") & (h.quantity == quantity)].estimate.iloc[0]
+
     frame = pd.DataFrame(rows, columns=["Data", "Historical policy", "Accepted", "Bad rate, accepted / rejected",
                                         "ABR estimation error, pp (accepted-only → Bayesian)",
                                         "Test ABR (accepted-only → BASL)"])
@@ -544,11 +547,13 @@ def hard_selection_section(out):
         "Historical rejects then never resemble accepts on the index, as under a scorecard cutoff.",
         table(frame),
         "Stronger selection makes accepted-only evaluation worse and Bayesian evaluation helps more; on Taiwan the paired "
-        "interval now excludes zero. BASL becomes clearly worse on Taiwan. Its pseudo-labels come from a logistic model, "
-        "and a logistic scorecard fitted to the hard-cutoff accepts has test ABR "
-        f"{100 * h[(h.dataset == 'taiwan') & (h.quantity == 'logit_test_abr')].estimate.iloc[0]:.1f}% on the whole Taiwan "
-        "population, consistent with poor extrapolation to the rejects. The check was added after the main results and is "
-        "exploratory. [Design and interpretation](../docs/hard-selection.md) · [All quantities](hard_selection.csv)",
+        "interval now excludes zero. BASL becomes worse on Taiwan in every fold, though by very different amounts; the "
+        "borrower-bootstrap intervals hold the fitted models fixed and understate that variation. On the hard-cutoff validation rejects the "
+        f"accepts-trained logistic prior averages {100 * diag('reject_prior_mean'):.1f}% against an actual "
+        f"{100 * diag('reject_bad_rate_validation'):.1f}% and ranks them with AUC {diag('reject_prior_auc'):.2f}, so a "
+        "logistic pseudo-labeler marks many risky rejects as good, while even this understated prior moves the evaluation "
+        "toward the truth. The check was added after the main results and is exploratory. "
+        "[Design and interpretation](../docs/hard-selection.md) · [All quantities](hard_selection.csv)",
     ]
 
 
@@ -570,6 +575,11 @@ def summary_section(out, sims, comp, contrast):
     own_hits = int(((dutch.revised_young_year_rate < lower) & dutch.realized_below_both).sum())
     hard = pd.read_csv(out / "hard_selection.csv").set_index(["dataset", "quantity"])
     hard = hard[~hard.index.duplicated()]
+
+    folds = pd.read_csv(out / "hard_selection_training.csv").query("dataset == 'taiwan'")
+    folds = folds.pivot(index="fold", columns="method", values="abr")
+    gaps = (100 * (folds.basl - folds.accepts)).tolist()
+    worse = sum(g > 0 for g in gaps)
 
     def hard_interval(dataset, name):
         row = hard.loc[(dataset, name)]
@@ -602,7 +612,8 @@ def summary_section(out, sims, comp, contrast):
         f"- **Strength of selection.** Our main design gives every applicant a 5–95% chance of approval. With a hard cutoff "
         f"on the same index, Bayesian evaluation lowers Taiwan's ABR estimation error from {pp(hard.loc[('taiwan','accepts_eval_rmse_abr'),'estimate'])} "
         f"to {pp(hard.loc[('taiwan','bayes_eval_rmse_abr'),'estimate'])} pp, a change of {hard_interval('taiwan','bayes_minus_accepts_rmse_abr')} that "
-        f"excludes zero, while BASL raises its default rate by {hard_interval('taiwan','basl_minus_accepts_abr')}. On Prosper "
+        f"excludes zero, while BASL raises its default rate in {worse} of {len(gaps)} separately fitted folds "
+        f"({min(gaps):+.2f} to {max(gaps):+.2f} pp, mean {hard_interval('taiwan','basl_minus_accepts_abr')} with models held fixed). On Prosper "
         f"the error falls from {pp(hard.loc[('prosper','accepts_eval_rmse_abr'),'estimate'])} to {pp(hard.loc[('prosper','bayes_eval_rmse_abr'),'estimate'])} pp "
         f"and BASL changes ABR by {hard_interval('prosper','basl_minus_accepts_abr')}. The evaluation idea survives strong "
         "selection; the training idea does not in these cohorts. This check was added after the main results.",

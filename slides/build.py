@@ -385,6 +385,14 @@ def result_fields():
             row = one(hard, dataset=dataset, design="hard", quantity=q)
             fields[f"{key}_hard_{label}_delta"] = signed(row["estimate"]).replace("-", "−")
             fields[f"{key}_hard_{label}_ci"] = f"[{signed(row['ci_low'])}, {signed(row['ci_high'])}]".replace("-", "−")
+    folds = {}
+    for r in read_table("hard_selection_training"):
+        folds.setdefault((r["dataset"], r["fold"]), {})[r["method"]] = float(r["abr"])
+    for key, dataset in [("tw", "taiwan"), ("pr", "prosper")]:
+        gaps = [100 * (v["basl"] - v["accepts"]) for (d, _), v in folds.items() if d == dataset]
+        fields[f"{key}_hard_folds"] = str(len(gaps))
+        fields[f"{key}_hard_basl_worse"] = str(sum(g > 0 for g in gaps))
+        fields[f"{key}_hard_basl_range"] = f"{min(gaps):+.2f} to {max(gaps):+.2f}".replace("-", "−")
     # Same-cohort ABR estimation error: the selection correction without any population transfer.
     within = matching(read_table("evaluation"), metric="abr")
     for key, dataset in [("tw", "taiwan"), ("pr", "prosper")]:

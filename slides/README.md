@@ -1,6 +1,6 @@
 # Paper 11 defense
 
-Open the [defense PowerPoint](paper11.pptx) or [defense PDF](paper11.pdf) for the presentation. The first nine slides take about **9 minutes 30 seconds** at the planned pace. Slide 9 ends the talk. Select **Questions →** to open the topic index on slide 10, then choose a question. Every evidence slide has a **← Question index** link back. Typing the page number also works in PowerPoint slide show. A [nine-page rehearsal PDF](talk.pdf) contains the talk alone.
+Open the [defense PowerPoint](paper11.pptx) or [defense PDF](paper11.pdf) for the presentation. The first ten slides take about **10 minutes 15 seconds** at the planned pace. Slide 10 summarizes the talk. Select **Questions →** to open the topic index on slide 11, then choose a question. Every evidence slide has a **← Question index** link back. Typing the page number also works in PowerPoint slide show. A [ten-page rehearsal PDF](talk.pdf) contains the talk alone.
 
 ## Speaking plan
 
@@ -14,18 +14,19 @@ Open the [defense PowerPoint](paper11.pptx) or [defense PDF](paper11.pdf) for th
 | 4:50–5:45 | 6 | Add the margins of the borrower groups between two approval cutoffs. |
 | 5:45–6:45 | 7 | Compare the loss on one experimental loan with the future gains its repayment could unlock. |
 | 6:45–8:05 | 8 | Use the early Dutch cohorts to distinguish an observable warning from a future default rate. |
-| 8:05–9:30 | 9 | Explain the rule, its external test and whether an approval decision changed. |
+| 8:05–9:30 | 9 | Explain the rule, its external test, the decisions it changed and why the pooled rate still won. |
+| 9:30–10:15 | 10 | Summarize the replication, which outcomes matter and lending to learn; state the main limitation. |
 
-The seminar's 15-minute format leaves room to expand the same nine slides. Spend an extra 1:30 walking through the paper and simulation panels on slide 4, 1:30 on the two holdout designs and their limitations on slide 5, 1:00 on why an ordinary update also reaches a lender that declines the pilot on slide 7, and 1:30 on the external signal's definition and uncertainty on slide 9. This makes a 15-minute talk before the seminar's question period.
+The seminar's 15-minute format leaves room to expand the same ten slides. Spend an extra 1:30 walking through the paper and simulation panels on slide 4, 1:15 on the two holdout designs and their limitations on slide 5, 1:00 on why an ordinary update also reaches a lender that declines the pilot on slide 7, and 1:00 on the external signal's definition and uncertainty on slide 9. This makes a 15-minute talk before the seminar's question period.
 
 ## The question index in the defense file
 
 | Pages | Questions |
 |---|---|
-| 11–15 | Which cohorts were held out? Did Tables 2 and 3 replicate? How were calibration, AUC and overfitting assessed? |
-| 16–18 | Can the same risk totals imply opposite policies? How large an audit settles a choice? What do random credit offers establish? |
-| 19–23 | When does a pilot break even? Which Estonian action changed? Did advance selection work? Why did the rule miss Finland and boosting lose to frequency? |
-| 24–26 | Did pooling help at Wells Fargo? When did Dutch defaults arrive? Which decisions changed in the Czech ledger, and under what margins? |
+| 12–16 | Which cohorts were held out? Did Tables 2 and 3 replicate? How were calibration, AUC and overfitting assessed? |
+| 17–19 | Can the same risk totals imply opposite policies? How large an audit settles a choice? What do random credit offers establish? |
+| 20–24 | When does a pilot break even? Which Estonian action changed? Did advance selection work? Why did the rule miss Finland and boosting lose to frequency? |
+| 25–27 | Did pooling help at Wells Fargo? When did Dutch defaults arrive? Which decisions changed in the Czech ledger, and under what margins? |
 
 ## Full evidence reference
 

@@ -10,7 +10,7 @@ PK = "http://schemas.openxmlformats.org/package/2006/relationships"
 CT = "http://schemas.openxmlformats.org/package/2006/content-types"
 AP = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
 NS = {"p": P, "a": A}
-INDEX = 10
+INDEX = 11  # ten talk slides, then the question index
 
 # Short menu label and source page in the 38-page evidence book. The last two
 # pages use the talk's table layout and the new Dutch and Czech result fields.
@@ -24,6 +24,12 @@ TOPICS = [
     ("Historical frequency vs. boosting", 35), ("Pooling at Wells Fargo", 38),
     ("Netherlands · timing and receipts", None), ("Czech bank · decisions and CZK", None),
 ]
+
+
+
+def topic_page(title):
+    return INDEX + 1 + [name for name, _ in TOPICS].index(title)
+
 
 for prefix, uri in (("p", P), ("a", A), ("r", R)):
     ET.register_namespace(prefix, uri)
@@ -103,6 +109,7 @@ def menu(slide, rels):
             tree.remove(shape)
     header = shapes(slide)
     label(header["Title"], "Questions and supporting evidence")
+    header["TextBox 2"].findall("p:txBody/a:p", NS)[-1].find(".//a:t", NS).text = "Question index"
     label(header["TextBox 3"], str(INDEX))
     for col, group_names in enumerate((("Study design and replication", "Policy comparisons"),
                                        ("Learning from pilot loans", "Early signals and transfer"))):
@@ -124,14 +131,14 @@ def notes_body(notes):
 
 def navigation(slide, rels, page):
     tree = slide.find("p:cSld/p:spTree", NS)
-    caption = "Questions  →" if page == 9 else "←  Question index"
+    caption = "Questions  →" if page == INDEX - 1 else "←  Question index"
     textbox(tree, "Evidence navigation", caption, 832, 34, 267, 37, 16,
             align="r", jump=link(rels, INDEX))
 
 
-def reserve_details(slide, notes, page, fields):
+def reserve_details(slide, notes, topic, fields):
     f = fields
-    if page == 25:
+    if topic == "Netherlands · timing and receipts":
         title = "Dutch defaults arrived later in the newer cohorts"
         intro = "In November 2023, how many defaults by year one were already visible by month six?"
         table = [
@@ -184,9 +191,11 @@ def reserve_details(slide, notes, page, fields):
 def adapt_notes(notes, page):
     body = notes_body(notes)
     text = " ".join(node.text or "" for node in body.findall(".//a:t", NS))
-    if page <= 9:
+    if page < INDEX:
         text = text.replace("see evidence 6–7 and 18 for the paired comparisons, AUC and calibration, or 21 for the alternative stopping rule",
-                            "use pages 12–14 for the paper tables, AUC and calibration, or page 15 for overfitting")
+                            f"use pages {topic_page('Paper Table 2 · evaluation error')}–{topic_page('Calibration and AUC')} "
+                            f"for the paper tables, AUC and calibration, or page {topic_page('Overfitting and robustness')} "
+                            "for overfitting")
     else:
         # The evidence book originally had a second timing plan. Only the first
         # nine pages of this assembled file are part of the spoken presentation.
@@ -217,7 +226,7 @@ def assemble(talk, evidence, output, fields):
             if page == 5:
                 footer = shapes(slide)["text-64-674"]
                 txt = footer.find(".//a:t", NS)
-                txt.text = txt.text.replace("evidence slide 18", "page 14")
+                txt.text = txt.text.replace("evidence slide 18", f"page {topic_page('Calibration and AUC')}")
             if page == INDEX:
                 menu(slide, srels)
                 set_text(notes_body(notes), "Use any entry to open that evidence page. Each reserve page links back here.")
@@ -226,13 +235,14 @@ def assemble(talk, evidence, output, fields):
                 label(head["TextBox 3"], str(page))
                 header_lines = head["TextBox 2"].findall("p:txBody/a:p", NS)
                 header_lines[-1].find(".//a:t", NS).text = "Supporting evidence"
-                if page in (25, 26):
-                    reserve_details(slide, notes, page, fields)
-                if page == 20:
-                    for node in slide.findall(".//a:t", NS):
-                        node.text = (node.text or "").replace(" (backup 31)", "")
+                topic, original = TOPICS[page-INDEX-1]
+                if original is None:
+                    reserve_details(slide, notes, topic, fields)
+                # Evidence-book cross references do not apply to the assembled numbering.
+                for node in slide.findall(".//a:t", NS):
+                    node.text = (node.text or "").replace(" (backup 31)", "")
                 navigation(slide, srels, page)
-            elif page == 9:
+            elif page == INDEX - 1:
                 navigation(slide, srels, page)
             if page != INDEX:
                 adapt_notes(notes, page)

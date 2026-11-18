@@ -306,9 +306,10 @@ def early_payment_fields():
         row = one(read_table("early_czech_policy"), method="six", reference=baseline, good="0.1", bad="-0.45")
         values[f"cz_{baseline}_switch"] = row["extra_books"]+" / "+row["dropped_books"]
         values[f"cz_{baseline}_money"] = f"{float(row['delta_margin_czk']):+,.0f}".replace("-", "−")
+        values[f"cz_{baseline}_drop"] = row["dropped_books"]
     scores = read_table("early_czech_metrics")
     for method in ("local", "six", "other"):
-        values[f"cz_{method}_err"] = f"{float(one(scores, method=method)['brier']):.5f}"
+        values[f"cz_{method}_err"] = f"{float(one(scores, method=method)['brier']):.4f}"
         values[f"cz_{method}_funded"] = one(policy, method=method)["funded"]
     return values
 
@@ -346,6 +347,8 @@ def result_fields():
             continue
         ci = one(uncertainty, dataset=dataset, contrast="basl_minus_accepts_abr")
         fields[f"{key}_ci"] = f"[{signed(ci['ci_low'])}, {signed(ci['ci_high'])}]"
+        error = one(uncertainty, dataset=dataset, contrast="bayes_minus_accepts_rmse_abr")
+        fields[f"{key}_eval_ci"] = f"[{signed(error['ci_low'])}, {signed(error['ci_high'])}]".replace("-", "−")
         fields[f"{dataset}_n"] = format(int(one(cohort, dataset=dataset)["population_rows"]), ",")
         guarded = matching(training, dataset=dataset, method="basl_guarded")
         fields[f"{key}_guard"] = percent(statistics.mean(float(r["abr"]) for r in guarded))
@@ -367,6 +370,11 @@ def result_fields():
                       ("recovery", "basl_recovery_fraction"), ("guard", "basl_conservative_recovery_fraction")]:
         estimate = one(sensitivity, metric="abr", statistic=stat)["estimate"]
         fields["sim_" + key] = percent(estimate) if key in {"recovery", "guard"} else number(estimate)
+    for key, stat in [("ignore", "accept_eval_rmse"), ("bayes", "bayes_eval_rmse")]:
+        fields["sim_paper_" + key] = number(one(sensitivity, metric="abr", statistic=stat)["paper_value"])
+    recovery = one(sensitivity, metric="abr", statistic="basl_recovery_fraction")
+    fields["sim_paper_recovery"] = f"{100 * float(recovery['paper_value']):.1f}%"
+    fields["sim_recovery_ci"] = f"{100 * float(recovery['ci_low']):.1f}–{100 * float(recovery['ci_high']):.1f}%"
     vintages = read_table("vintage_summary")
     bayes = one(vintages, method="bayes")
     fields.update(v_n=bayes["quarters"], v_wins=bayes["quarters_better_than_accepts"])

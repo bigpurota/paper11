@@ -8,7 +8,7 @@ A bank learns how people repay the loans it approves. How well can it then score
 
 [Defense PowerPoint with clickable Q&A](slides/paper11.pptx) · [Projection PDF](slides/paper11.pdf) · [Full evidence reference](slides/evidence.pdf) · [Research report](results/report.md) · [Team contributions and assessment](docs/contributions.md)
 
-The first nine slides cover the talk in about 9½ minutes. At the end, open **slide 10** to jump to any of the sixteen backup pages and return to the menu with one click.
+The first ten slides cover the talk in about 10¼ minutes, ending with a one-slide summary. At the end, open **slide 11** to jump to any of the sixteen backup pages and return to the menu with one click.
 
 ## Replicating the paper
 

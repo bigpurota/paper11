@@ -185,6 +185,26 @@ def transfer_fields():
     return fields
 
 
+def signal_fields():
+    fields = {}
+    cases = read_table("finnish_pilot_cases")
+    for prefix, origin in [("mar", "2021-03"), ("nov", "2021-11"), ("feb", "2022-02")]:
+        row = one(cases, origin_month=origin)
+        for name, key in [("direct", "expected_direct"), ("info", "expected_information"),
+                          ("net", "expected_total"), ("cash", "incremental_total_cash")]:
+            value = float(row[key])
+            sign = "+" if value > 0 else "−" if value < 0 else ""
+            fields[f"s_{prefix}_{name}"] = f"{sign}€{abs(value):,.2f}"
+    primary = matching(read_table("pilot_signal_ml_metrics"), feed="peers", subset="full", country="ALL")
+    for name, key in [("public", "brier_public_refresh"), ("peers", "brier_peer_feed"),
+                      ("private", "brier_private")]:
+        row = one(primary, metric=key)
+        avg, low, high = [f"{float(row[k]):+.5f}".replace("-", "−") for k in ("mean", "low", "high")]
+        fields[f"s_{name}"] = avg
+        fields[f"s_{name}_ci"] = f"[{low}, {high}]"
+    return fields
+
+
 def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
@@ -196,6 +216,7 @@ def result_fields():
     fields = decision_fields()
     fields.update(pilot_fields())
     fields.update(transfer_fields())
+    fields.update(signal_fields())
     for key, dataset in [("orig", "monedo"), ("tw", "taiwan"), ("pr", "prosper")]:
         for label, method in [("a", "accepts"), ("i", "ipw"), ("b", "bayes")]:
             fields[f"{key}_eval_{label}"] = number(one(comparison, table=2, method=method, metric="abr")[dataset])

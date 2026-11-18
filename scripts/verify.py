@@ -330,6 +330,194 @@ def verify_frozen_policy(out):
     assert (out/"pilot_forecast_validation.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
+def verify_signal_forecasts(rows, data, training):
+    keys = ["country", "origin_month"]
+    assert not rows.duplicated([*keys, "feed"]).any()
+    assert set(rows.feed) == {"peers", "no_peers"}
+    baseline = data.set_index(keys).sort_index()
+    for feed, predictions in rows.groupby("feed"):
+        forecast = predictions.set_index(keys).sort_index()
+        pd.testing.assert_frame_equal(forecast[baseline.columns], baseline, check_dtype=False)
+        assert forecast.model_scorable.all()
+        assert forecast.train_n.eq(len(training)).all()
+        assert forecast.train_months.eq(training.origin_month.nunique()).all()
+        counts = forecast.index.get_level_values("country").map(training.country.value_counts()).fillna(0)
+        assert np.array_equal(forecast.analog_n, np.where(counts >= 12, counts, len(training)))
+        assert np.array_equal(forecast.analog_pooled, counts < 12)
+        for field in ("pi_disclosure", "m_repay", "m_default", "m_blind", "m_seen", "pred_issue_pilot_pd",
+                      "pred_switch_probability"):
+            assert forecast[field].between(0, 1).all()
+        pi = forecast.pi_disclosure
+        assert_allclose(forecast.m_blind, forecast.m_repay + pi * (forecast.m_default - forecast.m_repay))
+        assert_allclose(forecast.m_seen, np.where(forecast.pilot_default == 1, forecast.m_default, forecast.m_repay))
+        ordinary = forecast.m_peers if feed == "peers" else forecast.m_public
+        assert_allclose(forecast.m_independent_common, ordinary)
+        assert np.array_equal(forecast.blind_lend, .10 - .55 * forecast.m_blind > 1e-12)
+        assert np.array_equal(forecast.seen_lend, .10 - .55 * forecast.m_seen > 1e-12)
+        assert (forecast.pred_info_money >= 0).all()
+        direct = forecast.pilot_principal * (.10 - .55 * forecast.pred_issue_pilot_pd)
+        assert_allclose(forecast.pred_direct_money, direct, atol=1e-7)
+        assert_allclose(forecast.pred_net_money, direct + forecast.pred_info_money, atol=1e-7)
+        tol = 1e-12 * forecast.pilot_principal
+        assert np.array_equal(forecast.ml_selected, forecast.structural_eligible & (direct < -tol)
+                              & (direct + forecast.pred_info_money > tol))
+
+
+def verify_signal_metrics(episodes, table, counts):
+    for cell in counts.itertuples(index=False):
+        rows = episodes.loc[episodes.feed.eq(cell.feed)]
+        if cell.subset == "later":
+            rows = rows.loc[rows.origin_month.ge("2023-11")]
+        if cell.country != "ALL":
+            rows = rows.loc[rows.country.eq(cell.country)]
+        scored = rows.loc[rows.future_count.gt(0)]
+        eligible = rows.loc[rows.structural_eligible]
+        metrics = table.loc[(cell.feed, cell.subset, cell.country)]
+        assert (len(rows), rows.origin_month.nunique(), len(scored), len(eligible)) == (
+            cell.scheduled, cell.months, cell.nonempty, cell.eligible)
+        assert (eligible.ml_selected.sum(), eligible.structural_selected.sum()) == (
+            cell.new_selected, cell.old_selected)
+
+        # Expand the weighted binary Brier algebra directly in euro amounts.
+        bad = scored.future_default_principal
+        good = scored.future_principal - bad
+
+        def loss(p):
+            return (good * p**2 + bad * (1-p)**2) / scored.future_principal
+
+        b, s = loss(scored.m_blind), loss(scored.m_seen)
+        initial, origin, public = loss(scored.q_initial), loss(scored.m_origin), loss(scored.m_public)
+        peers, common = loss(scored.m_peers), loss(scored.m_independent_common)
+        random_loss = loss(scored.m_repay) * (1-scored.pi_disclosure) + loss(scored.m_default) * scored.pi_disclosure
+        p_seen = scored.m_seen.clip(1e-12, 1-1e-12)
+        p_blind = scored.m_blind.clip(1e-12, 1-1e-12)
+        bits = (good * np.log2((1-p_seen)/(1-p_blind)) + bad * np.log2(p_seen/p_blind)) / scored.future_principal
+        computed = {"brier_initial": initial, "brier_origin": origin, "brier_public": public, "brier_peers": peers,
+                    "brier_common_fit": common, "brier_blind": b, "brier_seen": s,
+                    "brier_contract_and_model": initial-origin, "brier_public_refresh": origin-public,
+                    "brier_peer_feed": public-peers, "brier_private": b-s, "brier_private_refit": common-s,
+                    "brier_real_vs_random": random_loss-s, "brier_randomized": random_loss,
+                    "private_log_gain_bits": bits}
+        assert cell.scored == (b - s).count()
+        direction = eligible.seen_lend.astype(int) - eligible.blind_lend.astype(int)
+        direction = direction.where(eligible.future_count.gt(0), 0)
+        new = eligible.ml_selected.astype(int)
+        old = eligible.structural_selected.astype(int)
+        for basis in ["cash", "scenario"]:
+            pilot = eligible["pilot_" + basis]
+            change = eligible["future_" + basis].mul(direction).where(direction.ne(0), 0.)
+            net = pilot + change
+            strict = direction.ne(0) & pilot.lt(-1e-12) & net.gt(1e-12)
+            computed.update({
+                "new_direct_" + basis: pilot * new, "new_followup_" + basis: change * new,
+                "new_" + basis: net * new, "old_" + basis: net * old,
+                "new_minus_old_" + basis: net * (new-old), "forced_" + basis: net,
+                "strict_forced_" + basis: strict, "strict_new_" + basis: strict * new})
+            if basis == "cash":
+                assert (strict.sum(), (strict * new).sum(), (net * new).count()) == (
+                    cell.strict_available, cell.strict_caught, cell.cash_policy_known)
+        switched = direction.ne(0)
+        assert (switched.sum(), (switched * new).sum()) == (cell.forced_switches, cell.new_switches)
+        computed["switch_forced"] = switched
+        computed["switch_new"] = switched * new
+        assert set(metrics.index) == set(computed)
+        for name, values in computed.items():
+            metric = metrics.loc[name]
+            assert (len(values), values.count()) == (metric.population, metric.observed)
+            assert_allclose(values.mean(), metric["mean"], atol=1e-9, equal_nan=True)
+        if cell.subset == "full" and cell.country == "ALL":
+            # Recreate both primary end points with countries paired within calendar quarters.
+            grid = pd.period_range("2022Q4", "2024Q2", freq="Q")
+            rng = np.random.default_rng(26011)
+            starts = rng.integers(len(grid), size=(2500, 2))
+            blocks = (starts[:, :, None] + np.arange(4)).reshape(2500, 8)[:, :len(grid)] % len(grid)
+            for name in ("brier_private", "new_cash", "new_minus_old_cash"):
+                values = computed[name]
+                quarters = pd.PeriodIndex(rows.loc[values.index, "origin_month"], freq="M").asfreq("Q")
+                sums = values.groupby(quarters).sum().reindex(grid, fill_value=0).to_numpy()
+                sizes = values.groupby(quarters).count().reindex(grid, fill_value=0).to_numpy()
+                denominator = sizes[blocks].sum(axis=1)
+                draws = sums[blocks].sum(axis=1)[denominator > 0] / denominator[denominator > 0]
+                target = metrics.loc[name]
+                assert len(draws) == target.estimable_draws
+                assert_allclose(np.quantile(draws, [.025, .975]), [target.low, target.high], atol=1e-9)
+        else:
+            assert metrics.low.isna().all() and metrics.high.isna().all()
+
+
+def verify_signal_study(out):
+    def read(name):
+        return pd.read_csv(out / f"{name}.csv")
+
+    panel = read("pilot_signal_panel")
+    coverage = read("pilot_signal_panel_coverage")
+    keys = ["sample", "country", "origin_month"]
+    assert not coverage.duplicated(keys).any() and not panel.duplicated(keys).any()
+    supported = coverage.loc[coverage.supported].set_index(keys).sort_index()
+    exported = panel.set_index(keys).sort_index()
+    pd.testing.assert_index_equal(supported.index, exported.index)
+    assert np.array_equal(supported.issued - 1, exported.peer_total)
+    assert np.array_equal(supported.origin_known_flags - exported.pilot_default.notna(), exported.peer_n)
+    assert panel.peer_defaults.between(0, panel.peer_n).all() and panel.peer_n.le(panel.peer_total).all()
+    origin = pd.PeriodIndex(panel.origin_month, freq="M")
+    assert (origin + 13).equals(pd.PeriodIndex(panel.disclosure_month, freq="M"))
+    assert (origin + 26).equals(pd.PeriodIndex(panel.target_ready_month, freq="M"))
+    assert panel.prior_n.ge(50).all() and panel.future_count.between(0, 25).all()
+    assert panel.future_event_n.le(panel.future_count).all()
+    assert np.array_equal(panel.structural_eligible, .10 - .55 * panel.q_initial < -1e-12)
+    assert_allclose(panel.pilot_scenario, panel.pilot_principal * (.10-.55*panel.pilot_default), atol=1e-8)
+    assert_allclose(panel.future_scenario, .10*panel.future_principal-.55*panel.future_default_principal, atol=1e-7)
+    train = panel.loc[panel["sample"].eq("train")]
+    test = panel.loc[panel["sample"].eq("test")]
+    discovery = panel.loc[panel["sample"].eq("discovery")]
+    assert train.target_ready_month.le("2022-10").all()
+    assert train[["pilot_cash", "future_cash", "pilot_balance", "future_balance"]].isna().all().all()
+    assert sorted(test.origin_month.unique()) == list(pd.period_range("2022-10", "2024-05", freq="M").astype(str))
+    assert test.future_in_previous_pilot_count.eq(0).all() and test.future_in_previous_continuation_count.eq(0).all()
+    assert not test.loc[test.origin_month.ge("2023-11"), "pilot_in_previous_continuation"].any()
+    assert len(discovery) == 3 and discovery.country.eq("Finland").all()
+    assert sorted(discovery.origin_month) == ["2021-03", "2021-11", "2022-02"]
+    fit = train.loc[train.pilot_default.notna() & train.future_count.gt(0)
+                    & train.future_count.eq(train.future_event_n) & train.future_default_principal.notna()]
+    episodes = read("pilot_signal_ml_episodes")
+    verify_signal_forecasts(episodes, test, fit)
+    verify_signal_forecasts(read("pilot_signal_ml_finnish"), discovery, fit.loc[fit.target_ready_month.le("2021-03")])
+    metrics = read("pilot_signal_ml_metrics").set_index(["feed", "subset", "country", "metric"]).sort_index()
+    counts = read("pilot_signal_ml_coverage")
+    assert metrics.index.is_unique and not counts.duplicated(["feed", "subset", "country"]).any()
+    cells = {(feed, "full", country) for feed in episodes.feed.unique()
+             for country in ["ALL", *test.country.unique()]}
+    cells.update((feed, "later", "ALL") for feed in episodes.feed.unique())
+    assert cells == set(map(tuple, counts[["feed", "subset", "country"]].to_numpy()))
+    assert cells == set(metrics.index.droplevel("metric"))
+    verify_signal_metrics(episodes, metrics, counts)
+
+    cases = read("finnish_pilot_cases").set_index("origin_month").sort_index()
+    original = read("pilot_holdout_episodes").query("sample == 'seasoned' and eligible")
+    original["money_rank"] = original.score.rank(ascending=False, method="min")
+    original["recovery_rank"] = original.strict_probability.rank(ascending=False, method="min")
+    reference = original.loc[original.country.eq("Finland") & original.grade.eq("(unrated)")].set_index("origin_month")
+    reference = reference.loc[discovery.origin_month.sort_values()]
+    pd.testing.assert_index_equal(cases.index, reference.index)
+    assert_allclose(cases.funding_rank, reference.money_rank)
+    assert_allclose(cases.strict_recovery_rank, reference.recovery_rank)
+    assert_allclose(cases.expected_direct + cases.expected_info_after_default + cases.expected_info_after_repayment,
+                    reference.score, atol=1e-8)
+    assert_allclose(cases.expected_total, reference.score, atol=1e-8)
+    assert_allclose(cases.strict_recovery_probability, reference.strict_probability, atol=1e-10)
+    assert np.array_equal(cases.selected, reference.selected)
+    assert_allclose(cases.incremental_total_cash, reference.net_cash, atol=1e-8)
+    assert_allclose(cases.incremental_total_scenario, reference.net_scenario, atol=1e-8)
+    peer_mass = 20 * cases.later_public_risk + cases.peer_defaults
+    peer_n = 20 + cases.peer_flags_known
+    assert_allclose(cases.later_peer_pd_without_pilot, peer_mass / peer_n)
+    assert_allclose(cases.later_peer_pd_with_pilot, (peer_mass + cases.observed_default) / (peer_n + 1))
+    direction = ((cases.later_peer_pd_with_pilot < 2/11).astype(int)
+                 - (cases.later_peer_pd_without_pilot < 2/11).astype(int))
+    assert_allclose(cases.incremental_future_cash_with_shared_peers, direction * cases.observed_future_cash)
+    print("PASS: dated pilot cohorts, hidden versus observed forecasts, block interval, paired cash and Finnish decisions.")
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -378,12 +566,13 @@ def verify(out):
     verify_cost_of_a_pilot(out)
     verify_transfer(out)
     verify_frozen_policy(out)
+    verify_signal_study(out)
     print("PASS: locked cash contrasts, profile history, cross-lender signals, transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
 def compare_pilot_tables(out, reference):
     for family in ("information_value", "pilot_replay", "pilot_transfer", "lender_pilot", "pilot_targeting",
-                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper"):
+                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper", "finnish_pilot"):
         actual = {p.name for p in out.glob(f"{family}_*.csv")}
         expected = {p.name for p in reference.glob(f"{family}_*.csv")}
         if not expected or actual != expected:

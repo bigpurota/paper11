@@ -1,0 +1,13 @@
+feed,subset,country,scheduled,months,nonempty,scored,eligible,new_selected,old_selected,new_switches,forced_switches,strict_available,strict_caught,cash_policy_known
+no_peers,full,ALL,59,20,48,48,19,0,2,0.0,0.0,0.0,0.0,19
+no_peers,full,Estonia,20,20,20,20,0,0,0,0.0,0.0,0.0,0.0,0
+no_peers,full,Finland,20,20,20,20,0,0,0,0.0,0.0,0.0,0.0,0
+no_peers,full,Netherlands,8,8,8,8,8,0,2,0.0,0.0,0.0,0.0,8
+no_peers,full,Spain,11,11,0,0,11,0,0,0.0,0.0,0.0,0.0,11
+no_peers,later,ALL,21,7,21,21,7,0,2,0.0,0.0,0.0,0.0,7
+peers,full,ALL,59,20,48,48,19,0,2,0.0,0.0,0.0,0.0,19
+peers,full,Estonia,20,20,20,20,0,0,0,0.0,0.0,0.0,0.0,0
+peers,full,Finland,20,20,20,20,0,0,0,0.0,0.0,0.0,0.0,0
+peers,full,Netherlands,8,8,8,8,8,0,2,0.0,0.0,0.0,0.0,8
+peers,full,Spain,11,11,0,0,11,0,0,0.0,0.0,0.0,0.0,11
+peers,later,ALL,21,7,21,21,7,0,2,0.0,0.0,0.0,0.0,7

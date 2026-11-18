@@ -60,6 +60,16 @@ For a **different lender**, we then locked a supplementary test on Prosper befor
 
 ![Pilot size at issue and the later ranking of strict recoveries](results/pilot_forecast_validation.png)
 
+### What does the bank learn from one particular loan?
+
+Before the March 2021 Finnish pilot, the amount-aware rule expected a direct loss of €86.93 and priced the information at €6.73. In November 2021 and February 2022 it forecast smaller direct losses, more future lending, and positive net values of €9.80 and €24.18. By the time the March outcome arrived, ordinary news had put estimated risk at 16.47%. Its default moved that estimate past the 18.18% break-even threshold to 20.45%. If both banks could already see the 473 other loan outcomes from the same cohort, the identical default moved risk from 7.36% to 7.55%. Both would continue lending. The archive records the loan outcomes. The information available to the two banks is an explicit assumption. [Three decision reconstructions](docs/finnish-pilot-cases.md)
+
+We then froze a small gradient-boosting model and asked it to forecast the next 25 loans twice. With the pilot hidden, the lender averages the two possible outcomes. With it revealed, it uses the corresponding branch of the **same fitted model**. The October 2022–May 2024 test supplied 48 nonempty country–month portfolios and 1,200 subsequent loans. Adding the cohort's other outcomes improved boosting's Brier loss by 0.03002. Revealing the pilot itself gave **−0.000097** improvement (95% calendar-block interval −0.000469 to +0.000262). The simple historical risk estimate had the lowest average loss among these comparisons. [Dated protocol](https://github.com/bigpurota/paper11/commit/dc96e5e) · [Forecast comparisons and controls](docs/pilot-signal-ml.md)
+
+Of 19 initially loss-making opportunities, the model predicted a positive information gain in bits on all 19. In every case, the possible updates stayed on the same side of the lending threshold across all historical scenarios. The ML rule funded zero, compared with two under the previous selector. The resulting €529.78 improvement in recorded cash across episodes came entirely from avoiding a direct pilot loss. Just eight of the 19 opportunities had a nonempty continuation, all in the Netherlands, which was absent from training. This test found no pilot whose signal paid for a loss. [Sample and overlap](docs/pilot-signal-panel.md) · [All gains and intervals](results/pilot_signal_ml_metrics.csv)
+
+![Forecast error on the 48 later portfolios and the incremental effect of one pilot](results/pilot_signal_ml.png)
+
 ### What other lenders can establish
 
 * **US SBA 504.** The fixed rule selected three of 79 initially loss-making region-quarters. All three subsequent actions stayed the same after the ordinary public update. The scenario gain per eligible episode was −0.022 (95% block interval −0.076 to +0.005), on loans of principal 100. [Dates, controls and assumptions](docs/pilot-replay.md)

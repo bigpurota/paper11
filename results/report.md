@@ -224,6 +224,24 @@ The same decision rule selected 0 of 30 opportunities at US lender Prosper. The 
 
 [Origination profiles](../docs/pilot-profiles.md) · [Information sensitivity](../docs/pilot-signal-sensitivity.md) · [Frozen model](../docs/pilot-rule-protocol.md) · [Bondora](../docs/pilot-holdout.md) · [Prosper](../docs/pilot-prosper.md) · [All policy results, ablations and intervals](pilot_rule_summary.csv)
 
+### Can the lender forecast what this particular pilot will teach it?
+
+| Finnish pilot | Direct forecast (€) | Forecast value of learning (€) | Total forecast (€) | Paired ledger cash if issued (€) |
+|---|---|---|---|---|
+| 2021-03 | -86.93 | +6.73 | -80.19 | +3,716.92 |
+| 2021-11 | -19.50 | +29.29 | +9.80 | +249.80 |
+| 2022-02 | -14.81 | +38.99 | +24.18 | +0.00 |
+
+In March 2021 the previous rule put a 1.20% chance on a changed decision for a nonempty portfolio. The later ordinary risk update brought the portfolio close to break-even. The pilot default then moved risk from 16.47% to 20.45%. In the alternative where both lenders could also see the other 473 loans from that month, the same default moved risk from 7.36% to 7.55% and both would lend. The ledger records funded loans. The extra cash in the table results from replaying the earlier information assumption. [Finnish case reconstruction](../docs/finnish-pilot-cases.md)
+
+A frozen boosting model priced the two possible observations at issue, then predicted the same future portfolio with its actual pilot outcome hidden and revealed. It learned from 232 earlier country–months. Among 48 later nonempty portfolios, the ordinary update improved its Brier score by 0.00822 and adding other loans from the same cohort improved it by 0.03002. The simple historical-risk forecast scored 0.08550, ahead of the boosting model with peers (0.09284).
+
+Revealing just the pilot changed Brier by -0.000097 in the direction of improvement (95% block interval -0.000469 to +0.000262). Of 19 initially loss-making opportunities, the model chose 0. The earlier selector chose 2 and its direct ledger cash summed to €-529.78. Neither selector captured a strict recovery. Only eight eligible cases had a nonempty continuation, all Dutch. The archive measures gross cash to its cutoff.
+
+![Forecast error by information set and the extra value of a single pilot](pilot_signal_ml.png)
+
+[Frozen design](../docs/pilot-signal-ml-protocol.md) · [Coverage and timing](../docs/pilot-signal-panel.md) · [Model and interpretation](../docs/pilot-signal-ml.md) · [All ablations, cash and intervals](pilot_signal_ml_metrics.csv)
+
 ## Limits and a three-month follow-up
 
 We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.

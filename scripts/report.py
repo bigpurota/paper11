@@ -90,6 +90,72 @@ def pilot_cash_plot(out):
     plt.close(fig)
 
 
+def pilot_signal_plot(out):
+    results = pd.read_csv(out / "pilot_signal_ml_metrics.csv")
+    pooled = results[(results.subset == "full") & (results.country == "ALL")]
+    primary = pooled[pooled.feed == "peers"].set_index("metric")
+    fig, axes = plt.subplots(1, 2, figsize=(11.1, 4.2), layout="constrained")
+    left, right = axes
+    levels = [("Historical risk at issue", "brier_initial"), ("Boosting at issue", "brier_origin"),
+              ("+ ordinary risk update", "brier_public"), ("+ cohort peers", "brier_peers")]
+    for i, (label, metric) in enumerate(levels):
+        row = primary.loc[metric]
+        color = "#526477" if i == 0 else "#167268"
+        left.plot([row.low, row.high], [i, i], color=color, lw=2)
+        left.scatter(row["mean"], i, color=color, s=40, zorder=3)
+    left.set_yticks(range(len(levels)), [l for l, _ in levels])
+    left.set_xlabel("Brier loss (lower is better)")
+    left.set_title("How well did each forecast do?", loc="left", weight="bold", fontsize=12)
+    comparisons = [("Shared peers", "peers", "brier_private"),
+                   ("Peers hidden", "no_peers", "brier_private"),
+                   ("Real vs random label¹", "peers", "brier_real_vs_random")]
+    for i, (_, feed, metric) in enumerate(comparisons):
+        row = pooled[(pooled.feed == feed) & (pooled.metric == metric)].iloc[0]
+        right.plot([row.low * 1000, row.high * 1000], [i, i], color="#24568a", lw=2)
+        right.scatter(row["mean"] * 1000, i, s=40, color="#24568a", zorder=3)
+    right.axvline(0, color="#78848f", ls="--", lw=1)
+    right.set_yticks(range(len(comparisons)), [item[0] for item in comparisons])
+    right.set_xlabel("Brier improvement × 1,000 (positive helps)")
+    right.set_title("What did one pilot add?", loc="left", weight="bold", fontsize=12)
+    for ax in axes:
+        ax.invert_yaxis()
+        ax.margins(y=.22)
+        ax.grid(axis="x", alpha=.16)
+        ax.spines[["top", "right", "left"]].set_visible(False)
+        ax.tick_params(axis="y", length=0)
+    layout = fig.get_layout_engine()
+    layout.set(rect=(0, .12, 1, .86), wspace=.08)
+    fig.suptitle("Forecasting the next 25 Bondora loans", x=.015, ha="left", weight="bold", fontsize=15)
+    fig.text(.015, .04, "48 country–months · 1,200 later loans · 95% intervals from calendar-quarter blocks.  "
+             "¹Independent draw using the same modeled default probability.", fontsize=8.2, color="#42556b")
+    fig.savefig(out / "pilot_signal_ml.png", dpi=170, facecolor="white", metadata={"Software": "Matplotlib"})
+    plt.close(fig)
+
+
+def signal_sections(out):
+    cases = pd.read_csv(out / "finnish_pilot_cases.csv")
+    primary = pd.read_csv(out / "pilot_signal_ml_metrics.csv").query(
+        "feed == 'peers' and subset == 'full' and country == 'ALL'").set_index("metric")
+    c = pd.read_csv(out / "pilot_signal_ml_coverage.csv").query(
+        "feed == 'peers' and subset == 'full' and country == 'ALL'").iloc[0]
+    comparison = cases[["origin_month", "expected_direct", "expected_information", "expected_total",
+                        "incremental_total_cash"]].copy()
+    for key in comparison.columns[1:]:
+        comparison[key] = comparison[key].map(lambda v: f"{v:+,.2f}")
+    comparison.columns = ["Finnish pilot", "Direct forecast (€)", "Forecast value of learning (€)",
+                          "Total forecast (€)", "Paired ledger cash if issued (€)"]
+    gain = primary.loc["brier_private"]
+    return [
+        "### Can the lender forecast what this particular pilot will teach it?",
+        table(comparison),
+        "In March 2021 the previous rule put a 1.20% chance on a changed decision for a nonempty portfolio. The later ordinary risk update brought the portfolio close to break-even. The pilot default then moved risk from 16.47% to 20.45%. In the alternative where both lenders could also see the other 473 loans from that month, the same default moved risk from 7.36% to 7.55% and both would lend. The ledger records funded loans. The extra cash in the table results from replaying the earlier information assumption. [Finnish case reconstruction](../docs/finnish-pilot-cases.md)",
+        f"A frozen boosting model priced the two possible observations at issue, then predicted the same future portfolio with its actual pilot outcome hidden and revealed. It learned from 232 earlier country–months. Among {c.scored} later nonempty portfolios, the ordinary update improved its Brier score by {primary.loc['brier_public_refresh','mean']:.5f} and adding other loans from the same cohort improved it by {primary.loc['brier_peer_feed','mean']:.5f}. The simple historical-risk forecast scored {primary.loc['brier_initial','mean']:.5f}, ahead of the boosting model with peers ({primary.loc['brier_peers','mean']:.5f}).",
+        f"Revealing just the pilot changed Brier by {gain['mean']:+.6f} in the direction of improvement (95% block interval {gain.low:+.6f} to {gain.high:+.6f}). Of {c.eligible} initially loss-making opportunities, the model chose {c.new_selected}. The earlier selector chose {c.old_selected} and its direct ledger cash summed to €{primary.loc['old_cash','mean'] * c.eligible:,.2f}. Neither selector captured a strict recovery. Only eight eligible cases had a nonempty continuation, all Dutch. The archive measures gross cash to its cutoff.",
+        "![Forecast error by information set and the extra value of a single pilot](pilot_signal_ml.png)",
+        "[Frozen design](../docs/pilot-signal-ml-protocol.md) · [Coverage and timing](../docs/pilot-signal-panel.md) · [Model and interpretation](../docs/pilot-signal-ml.md) · [All ablations, cash and intervals](pilot_signal_ml_metrics.csv)",
+    ]
+
+
 def pilot_forecast_plot(out):
     profiles = pd.read_csv(out / "pilot_profiles_selected.csv").sort_values("pilot_month")
     test = pd.read_csv(out / "pilot_holdout_episodes.csv")
@@ -326,11 +392,13 @@ def write_report(out, comp):
         "For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both designs reveal the same number of outcomes. Financial exploration costs may differ. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.",
         *extension_sections(out),
         *frozen_rule_sections(out),
+        *signal_sections(out),
         "## Limits and a three-month follow-up",
         "We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.",
         "[Data provenance](../docs/sources.md) · [Implementation](../docs/algorithm.md) · [Deviations](../docs/deviations.md) · [Simulation](../docs/simulation.md)"
     ]
     pilot_forecast_plot(out)
+    pilot_signal_plot(out)
     (out/"report.md").write_text("\n\n".join(sections)+"\n")
 
 

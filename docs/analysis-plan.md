@@ -28,3 +28,5 @@ After the Bondora tests, we locked a supplementary test on a different lender in
 ## A dated test of the value of one private observation
 
 The three known Finnish cases motivated a separate experiment on country-level portfolios. Before evaluating the new dates we published the issue and disclosure inputs, model and tuning values, decision rule, payoff and forecast comparisons and calendar-block interval. The full twenty-month test and the overlapping seven-month subset were chosen at that point. The latter's pilots and follow-up positions were all outside previously scored positions. [Protocol commit](https://github.com/bigpurota/paper11/commit/dc96e5e) · [Position and date audit](pilot-signal-panel.md) · [Results](pilot-signal-ml.md)
+
+The later frequency diagnosis uses only the earlier 48 published books. Before computing new paired endpoints we published the anchored model, a fixed first/26th candidate rule, payoff definitions, missing-principal bounds and four-month holdout. [Protocol commit](https://github.com/bigpurota/paper11/commit/fff202a) · [Results](frequency-test.md)

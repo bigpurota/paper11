@@ -34,6 +34,10 @@ def run(reference, cache):
                         ["-m","paper11.pilot_signal_panel","--cache",str(cache)],
                         ["-m","paper11.pilot_signal_ml"],
                         ["-m","paper11.pilot_signal_evaluation"],
+                        ["-m","paper11.frequency_diagnosis"],
+                        ["-m","paper11.frequency_panel","--cache",str(cache)],
+                        ["-m","paper11.frequency_model"],
+                        ["-m","paper11.frequency_evaluation"],
                         ["-m","paper11.rct","--cache",str(cache)],
                         ["scripts/report.py"], ["scripts/verify.py"]):
             subprocess.run([sys.executable,*command,"--out",tmp],env=env,check=True)

@@ -242,6 +242,22 @@ Revealing just the pilot changed Brier by -0.000097 in the direction of improvem
 
 [Frozen design](../docs/pilot-signal-ml-protocol.md) · [Coverage and timing](../docs/pilot-signal-panel.md) · [Model and interpretation](../docs/pilot-signal-ml.md) · [All ablations, cash and intervals](pilot_signal_ml_metrics.csv)
 
+### Why did a country default frequency beat boosting?
+
+In the earlier 48 portfolios the historical estimate used a median of 28,603 mature loans; the boosted model learned from 232 portfolio outcomes. In Finland the realized future default exposure averaged 9.24%, the historical rate 8.90%, and boosting at issue 38.44%. The model had received the historical rate as an input. Holding all other Finnish test fields fixed and substituting the earlier Finnish median rate moved the mean prediction only to 39.28%.
+
+Across all 48 portfolios the square of the mean forecast error explains 82.8% of the issue-time Brier gap. This describes a shift in the level of risk. The size of the historical sample varied sharply by country. [Country profiles and exact error decomposition](../docs/frequency_diagnosis.md)
+
+### A frequency anchor on the next four months
+
+Starting at the same historical rate, we trained three corrections on mature books and published their specification before scoring. In June–September 2024 the first-position candidate led to 12 supported books with 300 follow-up loans. The mean Brier loss at issue was 0.083211, after ordinary and peer updates 0.078720, and after revealing the pilot 0.078726. Directly pooling the peer frequencies scored 0.078538. A boosting model trained through the same cutoff scored 0.081877 with the pilot. All comparisons use the same subsequent portfolios.
+
+In Netherlands, the 2024-06 pilot's ordinary news moved the bank from decline to lend. The book contained €67,808 of principal. It earned €6,780.80 at the fixed first-year terms. The cumulative cash margin was −€47,498.91 with €54,043.41 principal outstanding. Revealing the pilot changed zero actions. No pilot in either candidate rank defaulted within its first year. Four origin months support descriptive comparisons only.
+
+![Finnish risk levels and forecast performance on the fresh portfolios](frequency_forecasts.png)
+
+[Public protocol](../docs/frequency-protocol.md) · [Panel and overlap](../docs/frequency-panel.md) · [Model](../docs/frequency-model.md) · [Full test, thresholds and cash](../docs/frequency-test.md)
+
 ## Limits and a three-month follow-up
 
 We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.

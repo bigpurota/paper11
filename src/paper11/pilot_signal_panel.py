@@ -34,17 +34,18 @@ def country_order(loans):
     return loans.sort_values(["date", "order_key", "source_order"], kind="stable")
 
 
-def previous_positions(loans, previous):
-    """Recover positions scored by the previous grade-based study, using its public schedule."""
+def previous_positions(loans, previous, *, by_grade=True):
+    """Recover issued and follow-up positions from the earlier schedule and its original ordering."""
     if previous.empty:
         return set(), set()
-    groups = ["country", "grade", "origin"]
+    groups = ["country", "grade", "origin"] if by_grade else ["country", "origin"]
     capped = loans.groupby(groups, sort=False).head(CAPACITY)
     by_group = capped.groupby(groups, sort=False).source_order.agg(list).to_dict()
     pilot_ids, continuation_ids = set(), set()
     for row in previous.itertuples(index=False):
-        pilot = by_group[(row.country, row.grade, pd.Period(row.origin_month, "M"))]
-        batch = by_group.get((row.country, row.grade, pd.Period(row.disclosure_month, "M")), [])
+        segment = (row.country, row.grade) if by_grade else (row.country,)
+        pilot = by_group[(*segment, pd.Period(row.origin_month, "M"))]
+        batch = by_group.get((*segment, pd.Period(row.disclosure_month, "M")), [])
         if len(batch) != row.future_count:
             raise ValueError("previous continuation count differs from the dated source")
         pilot_ids.add(pilot[0])
@@ -91,8 +92,10 @@ def ordinary_history(monthly):
     return estimates, releases
 
 
-def make_signal_panel(loans, previous=None, windows=None):
+def make_signal_panel(loans, previous=None, windows=None, *, pilot_rank=1):
     """Cash is withheld from training, including on loans whose one-year labels have matured."""
+    if pilot_rank < 1:
+        raise ValueError("pilot rank starts at one")
     include_discovery = windows is None
     windows = WINDOWS if windows is None else windows
     previous = pd.DataFrame() if previous is None else previous
@@ -100,6 +103,10 @@ def make_signal_panel(loans, previous=None, windows=None):
     loans = country_order(loans).assign(old_pilot=lambda d: d.source_order.isin(old_pilots),
                                         old_continuation=lambda d: d.source_order.isin(old_continuations))
     monthly, totals, pilots = country_cells(loans)
+    if pilot_rank != 1:
+        groups = ["country", "origin"]
+        ordered_index = loans.groupby(groups, sort=False).cumcount()
+        pilots = loans.loc[ordered_index.eq(pilot_rank - 1)].set_index(groups)
     estimates, releases = ordinary_history(monthly)
     books = totals.to_dict("index")
     zero = dict(count=0, principal=0., event_n=0, default_principal=0., scenario=0.,
@@ -125,9 +132,9 @@ def make_signal_panel(loans, previous=None, windows=None):
             cell = monthly.loc[key]
             support_row = dict(sample=sample, country=country, origin_month=str(date),
                                issued=int(cell.issued), origin_known_flags=int(cell.labels),
-                               supported=key in estimates)
+                               supported=key in estimates and cell.issued >= pilot_rank)
             support.append(support_row)
-            if key not in estimates:
+            if not support_row["supported"]:
                 continue
             q, u, n0, n1 = estimates[key]
             pilot = pilots.loc[key]

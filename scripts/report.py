@@ -90,6 +90,69 @@ def pilot_cash_plot(out):
     plt.close(fig)
 
 
+def frequency_sections(out):
+    previous = pd.read_csv(out / "frequency_diagnosis_support.csv").set_index("country")
+    old = pd.read_csv(out / "frequency_diagnosis.csv").query("country == 'ALL' and period == 'full'")
+    errors = old.set_index("forecast")
+    fresh = pd.read_csv(out / "frequency_evaluation.csv").query(
+        "pilot_rank == 1 and feed == 'peers' and scope == 'all'").set_index("metric")
+    test = pd.read_csv(out / "frequency_model_episodes.csv").query("pilot_rank == 1 and feed == 'peers'")
+    switch = test.loc[test.q_initial.ge(2/11) & test.m_public.lt(2/11)].iloc[0]
+    fin = previous.loc["Finland"]
+    issue = errors.loc["issue_boost"]
+    return [
+        "### Why did a country default frequency beat boosting?",
+        f"In the earlier 48 portfolios the historical estimate used a median of {int(previous.loc['ALL','test_history_size_median']):,} mature loans; the boosted model learned from {int(previous.loc['ALL','train_books'])} portfolio outcomes. In Finland the realized future default exposure averaged {fin.test_observed_rate:.2%}, the historical rate {fin.test_frequency:.2%}, and boosting at issue {fin.test_issue_boost:.2%}. The model had received the historical rate as an input. Holding all other Finnish test fields fixed and substituting the earlier Finnish median rate moved the mean prediction only to {fin.test_boost_with_training_country_median_q:.2%}.",
+        f"Across all 48 portfolios the square of the mean forecast error explains {100*issue.squared_mean_error_gap/issue.brier_gap_vs_issue:.1f}% of the issue-time Brier gap. This describes a shift in the level of risk. The size of the historical sample varied sharply by country. [Country profiles and exact error decomposition](../docs/frequency_diagnosis.md)",
+        "### A frequency anchor on the next four months",
+        f"Starting at the same historical rate, we trained three corrections on mature books and published their specification before scoring. In June–September 2024 the first-position candidate led to {len(test)} supported books with {test.future_count.sum()} follow-up loans. The mean Brier loss at issue was {fresh.loc['brier_frequency','mean']:.6f}, after ordinary and peer updates {fresh.loc['brier_common','mean']:.6f}, and after revealing the pilot {fresh.loc['brier_revealed','mean']:.6f}. Directly pooling the peer frequencies scored {fresh.loc['brier_peer_frequency','mean']:.6f}. A boosting model trained through the same cutoff scored {fresh.loc['brier_hgb_seen','mean']:.6f} with the pilot. All comparisons use the same subsequent portfolios.",
+        f"In {switch.country}, the {switch.origin_month} pilot's ordinary news moved the bank from decline to lend. The book contained €{switch.future_principal:,.0f} of principal. It earned €{switch.future_scenario:,.2f} at the fixed first-year terms. The cumulative cash margin was −€{abs(switch.future_cash):,.2f} with €{switch.future_balance:,.2f} principal outstanding. Revealing the pilot changed zero actions. No pilot in either candidate rank defaulted within its first year. Four origin months support descriptive comparisons only.",
+        "![Finnish risk levels and forecast performance on the fresh portfolios](frequency_forecasts.png)",
+        "[Public protocol](../docs/frequency-protocol.md) · [Panel and overlap](../docs/frequency-panel.md) · [Model](../docs/frequency-model.md) · [Full test, thresholds and cash](../docs/frequency-test.md)",
+    ]
+
+
+def frequency_plot(out):
+    prior = pd.read_csv(out / "pilot_signal_ml_episodes.csv").query(
+        "country == 'Finland' and feed == 'peers'").sort_values("origin_month")
+    scores = pd.read_csv(out / "frequency_evaluation.csv").query(
+        "pilot_rank == 1 and feed == 'peers' and scope == 'all'").set_index("metric")
+    fig, (left, right) = plt.subplots(1, 2, figsize=(11.1, 3.9), layout="constrained",
+                                      gridspec_kw={"width_ratios": [1.2, 1]})
+    time = pd.to_datetime(prior.origin_month)
+    real = 100 * prior.future_default_principal / prior.future_principal
+    left.scatter(time, real, s=24, color="#536170", label="Realized future default share", zorder=3)
+    left.plot(time, 100*prior.q_initial, color="#14766e", lw=2.5, label="Historical frequency")
+    left.plot(time, 100*prior.m_origin, color="#b45332", lw=2.2, label="Boosting at issue")
+    left.set_xticks(time.iloc[[0, 5, 10, 15, 19]], prior.origin_month.iloc[[0, 5, 10, 15, 19]], fontsize=8)
+    left.set_ylabel("Default share (%)")
+    left.set_ylim(bottom=-1)
+    handles, labels = left.get_legend_handles_labels()
+    fig.legend(handles, labels, ncols=3, frameon=False, fontsize=9, loc="outside lower center")
+    left.set_title("Finland on the earlier 20 books", loc="left", weight="bold", fontsize=11.5)
+    names = [("Historical frequency", "frequency"), ("+ ordinary update", "public"),
+             ("+ peers", "common"), ("+ own pilot", "revealed"),
+             ("Direct peer frequency", "peer_frequency"), ("Refit boosting, pilot seen", "hgb_seen")]
+    vals = [scores.loc["brier_"+key, "mean"] for _, key in names]
+    right.scatter(vals, range(len(names)), color=["#536170", "#14766e", "#14766e", "#14766e",
+                  "#536170", "#b45332"], s=37, zorder=3)
+    right.set_yticks(range(len(names)), [name for name, _ in names], fontsize=9)
+    right.invert_yaxis()
+    for i, val in enumerate(vals):
+        right.annotate(f"{val:.5f}", (val, i), xytext=(6, 0), textcoords="offset points",
+                       va="center", fontsize=8)
+    right.set_xlim(.0778, .085)
+    right.set_xticks([.078, .080, .082, .084])
+    right.set_title("Next period · 12 books, three countries", loc="left", weight="bold", fontsize=11.5)
+    right.set_xlabel("Brier loss (lower is better)")
+    right.margins(y=.12)
+    for ax in (left, right):
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="x" if ax is right else "y", alpha=.14)
+    fig.savefig(out / "frequency_forecasts.png", dpi=170, facecolor="white", metadata={"Software":"Matplotlib"})
+    plt.close(fig)
+
+
 def pilot_signal_plot(out):
     results = pd.read_csv(out / "pilot_signal_ml_metrics.csv")
     pooled = results[(results.subset == "full") & (results.country == "ALL")]
@@ -393,12 +456,14 @@ def write_report(out, comp):
         *extension_sections(out),
         *frozen_rule_sections(out),
         *signal_sections(out),
+        *frequency_sections(out),
         "## Limits and a three-month follow-up",
         "We can test label concealment among already funded borrowers. A randomized sample of actual would-be declines with mature repayment labels would identify the target population more directly. Collect such a sample under a fixed decision policy, estimate default and realized net revenue with funding costs, and repeat across time vintages and adequate overlap regions. Twelve Prosper quarters provide evidence on temporal transfer at one lender. Profit net of financing and servicing costs and transport to other macroeconomic conditions still require additional data.",
         "[Data provenance](../docs/sources.md) · [Implementation](../docs/algorithm.md) · [Deviations](../docs/deviations.md) · [Simulation](../docs/simulation.md)"
     ]
     pilot_forecast_plot(out)
     pilot_signal_plot(out)
+    frequency_plot(out)
     (out/"report.md").write_text("\n\n".join(sections)+"\n")
 
 

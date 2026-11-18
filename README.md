@@ -70,6 +70,14 @@ Of 19 initially loss-making opportunities, the model predicted a positive inform
 
 ![Forecast error on the 48 later portfolios and the incremental effect of one pilot](results/pilot_signal_ml.png)
 
+### Why did the frequency beat boosting, and can its updates improve a decision?
+
+In the earlier test the historical rate used a median of 28,603 measured loans per forecast. Boosting learned on 232 country–month portfolios, and having the frequency as an input did not make its prediction follow the new level of risk. In Finland the rate averaged **8.90%** against **9.24%** realized future default exposure. Boosting at issue averaged **38.44%**. All 20 Finnish test frequencies lay below the Finnish training range. Across all 48 books, 82.8% of the Brier gap at issue came from the models' different mean errors. [Error decomposition and model-input experiment](docs/frequency_diagnosis.md)
+
+We anchored the forecast to the historical rate and let the model learn only the updates from ordinary news, peer repayments and the pilot. On the next **12 country–month portfolios, 300 new subsequent loans**, Brier loss fell from **0.083211** at issue to **0.078720** with common news. Revealing the pilot moved it to **0.078726**. The direct pooled peer frequency scored **0.078538**, the best result on these dates. The Dutch June portfolio crossed the lending threshold on the ordinary risk update. No pilot outcome changed an action. The four-month window contains one initially loss-making opportunity and no pilot default in either candidate sample. [Protocol committed before scoring](https://github.com/bigpurota/paper11/commit/fff202a) · [Fresh test and Dutch cash flows](docs/frequency-test.md)
+
+![Earlier Finnish risk forecasts and the four-month anchored test](results/frequency_forecasts.png)
+
 ### What other lenders can establish
 
 * **US SBA 504.** The fixed rule selected three of 79 initially loss-making region-quarters. All three subsequent actions stayed the same after the ordinary public update. The scenario gain per eligible episode was −0.022 (95% block interval −0.076 to +0.005), on loans of principal 100. [Dates, controls and assumptions](docs/pilot-replay.md)

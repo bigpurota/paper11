@@ -205,6 +205,27 @@ def signal_fields():
     return fields
 
 
+def frequency_fields():
+    values = {}
+    history = read_table("frequency_diagnosis_support")
+    for name, country in [("all", "ALL"), ("fi", "Finland")]:
+        row = one(history, country=country)
+        for label, field in [("actual", "test_observed_rate"), ("rate", "test_frequency"),
+                             ("boost", "test_issue_boost")]:
+            values[f"fq_{name}_{label}"] = percent(row[field])
+    definition = dict(feed="peers", pilot_rank=1, scope="all", group="all")
+    scores = matching(read_table("frequency_evaluation"), **definition)
+    for label, key in [("q", "frequency"), ("p", "public"), ("c", "common"),
+                       ("y", "revealed"), ("raw", "peer_frequency")]:
+        values[f"fq_{label}"] = f"{float(one(scores, metric='brier_' + key)['mean']):.6f}"
+    actions = matching(read_table("frequency_action_summary"), **definition)
+    for label, key in [("p", "frequency_to_public"), ("c", "public_to_common"),
+                       ("y", "common_to_revealed")]:
+        row = one(actions, comparison=key)
+        values[f"fq_{label}switch"] = str(int(row["skip_to_lend"]) + int(row["lend_to_skip"]))
+    return values
+
+
 def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
@@ -217,6 +238,7 @@ def result_fields():
     fields.update(pilot_fields())
     fields.update(transfer_fields())
     fields.update(signal_fields())
+    fields.update(frequency_fields())
     for key, dataset in [("orig", "monedo"), ("tw", "taiwan"), ("pr", "prosper")]:
         for label, method in [("a", "accepts"), ("i", "ipw"), ("b", "bayes")]:
             fields[f"{key}_eval_{label}"] = number(one(comparison, table=2, method=method, metric="abr")[dataset])

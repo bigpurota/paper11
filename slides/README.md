@@ -1,6 +1,6 @@
 # Paper 11 presentation
 
-Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–34 are for questions.
+Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–36 are for questions.
 
 ## Fifteen-minute speaking plan
 
@@ -37,6 +37,8 @@ Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has e
 | 32 | Did the revised rule recover losses in later Bondora cohorts or at Prosper? |
 | 33 | Why did the rule pass over March 2021 and select the other two Finnish pilots? |
 | 34 | How much did boosting learn from a single pilot beyond ordinary information and other loans? |
+| 35 | Why did the historical rate track Finnish risk more closely than boosting? |
+| 36 | Did anchoring the forecast to the country rate change a later lending decision? |
 
 ## Updating the deck
 
@@ -53,3 +55,5 @@ Slide 29 uses the two principal tests in [pilot forecasting](../results/pilot_ta
 Slides 31–32 link origination profiles to later observed cash and compare the dated test with the US cross-lender supplement. Numeric fields come from [profiles](../results/pilot_profiles_selected.csv) and the [policy evaluation](../results/pilot_rule_summary.csv). The case-level cash is valued at the common cutoff within each lender.
 
 Slides 33–34 use the [three Finnish cases](../results/finnish_pilot_cases.csv) and [paired model evaluation](../results/pilot_signal_ml_metrics.csv). Forecasts on these slides use information available at the date indicated. Gross cash uses the common workbook cutoff.
+
+Slides 35–36 use [earlier error profiles](../results/frequency_diagnosis_support.csv), [fresh forecast errors](../results/frequency_evaluation.csv), and [changes in lending decisions](../results/frequency_action_summary.csv). Both slides have editable native tables.

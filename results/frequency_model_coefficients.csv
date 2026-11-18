@@ -1,0 +1,3 @@
+feed,training_cutoff,train_n,train_months,refresh_slope,peer_slope,pilot_slope,ridge_penalty
+peers,2024-06,277,144,0.548285733989,0.567809328235,0.00770850244702,1
+no_peers,2024-06,277,144,0.548285733989,0,0.0458737991763,1

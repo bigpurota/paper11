@@ -518,6 +518,209 @@ def verify_signal_study(out):
     print("PASS: dated pilot cohorts, hidden versus observed forecasts, block interval, paired cash and Finnish decisions.")
 
 
+def verify_frequency_metrics(out, rows):
+    """Independent arithmetic on the disclosed candidate rows and all report strata."""
+    cols = ["pilot_rank", "feed", "country", "origin_month"]
+    positions = rows.set_index(cols)
+    ledger = pd.read_csv(out / "frequency_actions.csv")
+    table = pd.read_csv(out / "frequency_evaluation.csv")
+    actions = pd.read_csv(out / "frequency_action_summary.csv")
+    policies = pd.read_csv(out / "frequency_policy.csv")
+    metrics_keys = ["pilot_rank", "feed", "scope", "group"]
+    assert not ledger.duplicated([*cols, "comparison"]).any()
+    for frame, field in [(table, "metric"), (actions, "comparison"), (policies, "policy")]:
+        assert not frame.duplicated([*metrics_keys, field]).any()
+    pairs = {"frequency_to_public": ("q_initial", "m_public"), "public_to_common": ("m_public", "m_blind"),
+             "frequency_to_common": ("q_initial", "m_blind"), "common_to_revealed": ("m_blind", "m_seen"),
+             "frequency_to_revealed": ("q_initial", "m_seen"), "raw_peers_to_common": ("pi_disclosure", "m_blind"),
+             "hgb_common_to_common": ("hgb_common", "m_blind"), "hgb_seen_to_revealed": ("hgb_seen", "m_seen")}
+    assert set(ledger.comparison) == set(pairs)
+    assert len(ledger) == len(rows) * len(pairs)
+    for name, (left, right) in pairs.items():
+        block = ledger.loc[ledger.comparison.eq(name)].set_index(cols).sort_index()
+        obs = positions.sort_index()
+        pd.testing.assert_index_equal(block.index, obs.index)
+        # All actual test pilot flags are observed; no imputation enters this ledger check.
+        assert obs.pilot_default.notna().all()
+        d = (.10 - .55 * obs[right] > 1e-12).astype(int) - (.10 - .55 * obs[left] > 1e-12).astype(int)
+        d = d.where(obs.future_count.gt(0), 0)
+        assert_allclose(block.direction, d)
+        cash = (d * obs.future_cash).where(d.ne(0), 0.)
+        assert_allclose(block.cash, cash, atol=1e-7)
+        good_case = .10 * obs.future_principal - .55 * obs.future_known_default_principal
+        bad_case = good_case - .55 * obs.future_unknown_principal
+        assert_allclose(block.scenario_lower, np.minimum(d * good_case, d * bad_case), atol=1e-7)
+        assert_allclose(block.scenario_upper, np.maximum(d * good_case, d * bad_case), atol=1e-7)
+
+    action_index = actions.set_index([*metrics_keys, "comparison"]).sort_index()
+    policy_index = policies.set_index([*metrics_keys, "policy"]).sort_index()
+    assert set(action_index.index.droplevel("comparison")) == set(policy_index.index.droplevel("policy"))
+    for key, reports in table.groupby(metrics_keys):
+        rank, feed, scope, label = key
+        subset = rows.loc[rows.pilot_rank.eq(rank) & rows.feed.eq(feed)]
+        if scope in {"country", "origin_month"}:
+            subset = subset.loc[subset[scope].eq(label)]
+        elif scope == "omit_month":
+            subset = subset.loc[subset.origin_month.ne(label)]
+        else:
+            assert scope == "all" and label == "all"
+        book = subset.loc[subset.future_count.gt(0)].set_index(cols)
+        scores = reports.set_index("metric")
+        valid = book.future_unknown_principal.eq(0) & book.pilot_default.notna()
+        for name, column in [("frequency", "q_initial"), ("public", "m_public"), ("common", "m_blind"),
+                             ("revealed", "m_seen"), ("hgb_common", "hgb_common"),
+                             ("hgb_2022_seen", "hgb_2022_seen")]:
+            d = book.future_known_default_principal.loc[valid]
+            v = book.future_principal.loc[valid]
+            p = book.loc[valid, column]
+            loss = ((v - d) * p**2 + d * (1-p)**2) / v
+            stat = scores.loc["brier_" + name]
+            assert len(book) == stat.books and loss.count() == stat.observed
+            assert_allclose(stat["mean"], loss.mean(), atol=1e-10)
+        # Relative binary Brier loss is affine in the unknown defaulted principal.
+        # Each portfolio can independently attain either endpoint.
+        lo = book.future_known_default_principal / book.future_principal
+        hi = lo + book.future_unknown_principal / book.future_principal
+        for name in ("frequency_to_common", "common_to_revealed"):
+            left, right = pairs[name]
+            p, q = book[left], book[right]
+            at_low, at_high = [(p - q) * (p + q - 2*z) for z in (lo, hi)]
+            expected = [at_low.loc[valid].mean(), np.minimum(at_low, at_high).mean(),
+                        np.maximum(at_low, at_high).mean()]
+            stat = scores.loc["gain_" + name]
+            assert_allclose(stat[["mean", "full_lower", "full_upper"]].astype(float), expected, atol=1e-10)
+        group_actions = ledger.merge(subset[cols], on=cols, validate="many_to_one")
+        for name, part in group_actions.groupby("comparison"):
+            r = action_index.loc[(*key, name)]
+            assert (len(part), part.direction.lt(0).sum(), part.direction.gt(0).sum()) == (
+                r.scheduled, r.lend_to_skip, r.skip_to_lend)
+            assert_allclose([r.total_cash, r.scenario_lower, r.scenario_upper],
+                            [part.cash.sum(skipna=False), part.scenario_lower.sum(skipna=False),
+                             part.scenario_upper.sum(skipna=False)], atol=1e-7)
+        eligible = subset.loc[subset.structural_eligible].set_index(cols)
+        private = group_actions.loc[group_actions.comparison.eq("common_to_revealed")].set_index(cols).loc[eligible.index]
+        new, old = eligible.ml_selected.astype(int), eligible.structural_selected.astype(int)
+        for name, w in [("force", new*0+1), ("skip", new*0), ("anchor", new), ("legacy", old),
+                        ("anchor_minus_legacy", new-old)]:
+            rp = policy_index.loc[(*key, name)]
+            pilot = (w * eligible.pilot_cash).where(w.ne(0), 0.)
+            future = (w * private.cash).where(w.ne(0), 0.)
+            assert len(eligible) == rp.eligible and rp.known_cash == (pilot + future).count()
+            assert_allclose([rp.direct_cash, rp.future_cash, rp.net_cash],
+                            [x.sum(skipna=False) for x in (pilot, future, pilot+future)], atol=1e-7)
+            if name != "anchor_minus_legacy":
+                recoveries = (w.eq(1) & eligible.pilot_cash.lt(0) & (pilot + future).gt(0) & private.direction.ne(0))
+                assert rp.recovered == recoveries.sum()
+            base = eligible.pilot_principal * (.10 - .55 * eligible.pilot_default)
+            a, b = w * (base + private.scenario_lower), w * (base + private.scenario_upper)
+            assert_allclose([rp.scenario_lower, rp.scenario_upper],
+                            [np.minimum(a, b).sum(skipna=False), np.maximum(a, b).sum(skipna=False)], atol=1e-7)
+
+
+def verify_frequency_study(out):
+    def read(name):
+        return pd.read_csv(out / f"{name}.csv")
+
+    diagnoses = read("frequency_diagnosis")
+    assert_allclose(diagnoses.brier, diagnoses.within_book_component + diagnoses.squared_mean_error
+                    + diagnoses.centered_error_variance, atol=1e-10)
+    assert_allclose(diagnoses.brier_gap_vs_issue, diagnoses.adjustment_squared - diagnoses.adjustment_alignment,
+                    atol=1e-10)
+    assert_allclose(diagnoses.brier_gap_vs_issue,
+                    diagnoses.squared_mean_error_gap + diagnoses.centered_error_variance_gap, atol=1e-10)
+    old = read("pilot_signal_ml_metrics").query("feed == 'peers' and subset == 'full' and country == 'ALL'").set_index("metric")
+    diag = diagnoses.query("period == 'full' and country == 'ALL'").set_index("forecast")
+    for f, metric in [("issue_frequency", "brier_initial"), ("issue_boost", "brier_origin"),
+                      ("peer_boost", "brier_peers"), ("pilot_revealed_boost", "brier_seen")]:
+        assert_allclose(diag.at[f, "brier"], old.at[metric, "mean"], atol=1e-10)
+
+    panel = read("frequency_panel")
+    coverage = read("frequency_panel_coverage")
+    keys = ["sample", "country", "origin_month", "pilot_rank"]
+    assert not panel.duplicated(keys).any() and not coverage.duplicated(keys).any()
+    covered = coverage.loc[coverage.supported].set_index(keys).sort_index()
+    data = panel.set_index(keys).sort_index()
+    pd.testing.assert_index_equal(covered.index, data.index)
+    assert (coverage.rank_available == (coverage.issued >= coverage.pilot_rank)).all()
+    assert not (coverage.supported & ~coverage.rank_available).any()
+    assert np.array_equal(covered.issued, data.peer_total + 1)
+    assert np.array_equal(covered.origin_known_flags, data.peer_n + data.pilot_default.notna().astype(int))
+    assert data.peer_defaults.between(0, data.peer_n).all()
+    assert data.future_count.between(0,25).all() and data.future_event_n.le(data.future_count).all()
+    assert data.future_unknown_principal.between(0, data.future_principal).all()
+    assert (data.future_known_default_principal + data.future_unknown_principal <= data.future_principal + 1e-7).all()
+    complete = data.future_count.eq(data.future_event_n)
+    assert np.array_equal(complete, data.future_unknown_principal.eq(0))
+    assert np.array_equal(complete, data.future_default_principal.notna())
+    assert_allclose(data.loc[complete, "future_default_principal"], data.loc[complete, "future_known_default_principal"])
+    train = panel.loc[panel["sample"].eq("train")]
+    test = panel.loc[panel["sample"].eq("test")]
+    assert train.target_ready_month.le("2024-06").all() and train.pilot_rank.eq(1).all()
+    assert test.origin_month.between("2024-06", "2024-09").all()
+    assert train[["future_cash", "pilot_cash", "future_balance", "pilot_balance"]].isna().all().all()
+    dates = pd.PeriodIndex(panel.origin_month, freq="M")
+    assert (dates + 26).equals(pd.PeriodIndex(panel.target_ready_month, freq="M"))
+    assert (dates + 13).equals(pd.PeriodIndex(panel.disclosure_month, freq="M"))
+    assert test.future_in_previous_pilot_count.eq(0).all() and test.future_in_previous_continuation_count.eq(0).all()
+    alt = test.loc[test.pilot_rank == 26]
+    assert not (alt.pilot_in_previous_pilot | alt.pilot_in_previous_continuation).any()
+    assert test.groupby(["country", "origin_month"]).future_principal.nunique().eq(1).all()
+    for field in ["q_initial", "q_fresh", "prior_n", "refresh_n", "future_known_default_principal",
+                  "future_unknown_principal", "future_cash", "future_count", "future_event_n"]:
+        assert test.groupby(["country", "origin_month"])[field].nunique(dropna=False).eq(1).all()
+    any_default = test.peer_defaults + test.pilot_default.fillna(0)
+    assert any_default.groupby([test.country, test.origin_month]).nunique().eq(1).all()
+    assert np.array_equal(test.pilot_in_previous_continuation, test.pilot_in_grade_book | test.pilot_in_country_book)
+
+    coeff = read("frequency_model_coefficients").set_index("feed")
+    rows = read("frequency_model_episodes")
+    fit = train.loc[train.pilot_default.notna() & train.future_count.gt(0)
+                    & train.future_count.eq(train.future_event_n)]
+    assert set(coeff.index) == set(rows.feed) == {"peers", "no_peers"}
+    assert coeff.index.is_unique and (coeff.train_n == len(fit)).all()
+    assert coeff.train_months.eq(fit.origin_month.nunique()).all() and coeff.ridge_penalty.eq(1).all()
+    baseline = test.set_index(keys).sort_index()
+    for feed, forecast in rows.groupby("feed"):
+        forecast = forecast.set_index(keys).sort_index()
+        pd.testing.assert_frame_equal(forecast[baseline.columns], baseline, check_dtype=False)
+        # Reconstruct the three training slopes by hand from their fitted scores.
+        target = fit.future_default_principal / fit.future_principal
+        def slope(x, residual):
+            return (x * residual).sum() / (1 + (x * x).sum())
+        innovation = fit.q_fresh - fit.q_initial
+        a = np.clip(slope(innovation, target - fit.q_initial), 0, 1)
+        public = fit.q_initial + a * innovation
+        keep = int(feed == "peers")
+        n, d = keep * fit.peer_n, keep * fit.peer_defaults
+        peer_update = (d - n * public) / (n + 20)
+        b = np.clip(slope(peer_update, target - public), 0, 1)
+        pi = (d + 20 * fit.q_fresh) / (n + 20)
+        gamma = slope(fit.pilot_default - pi, target - public - b * peer_update)
+        assert_allclose([a, b, gamma], coeff.loc[feed, ["refresh_slope", "peer_slope", "pilot_slope"]].astype(float),
+                        atol=1e-10)
+        p = forecast.q_initial * (1-a) + a * forecast.q_fresh
+        n, d = keep * forecast.peer_n, keep * forecast.peer_defaults
+        c = (1 - b * n / (n+20)) * p + b * d / (n+20)
+        pi = (d + 20 * forecast.q_fresh) / (n+20)
+        assert_allclose(forecast.m_public, p, atol=1e-10)
+        assert_allclose(forecast.m_blind, c, atol=1e-10)
+        assert_allclose(forecast.pi_disclosure, pi, atol=1e-10)
+        assert_allclose(c, pi * forecast.m_default + (1-pi) * forecast.m_repay, atol=1e-10)
+        assert forecast.m_repay.between(0,1).all() and forecast.m_default.between(0,1).all()
+        measured = forecast.pilot_default.notna()
+        observed = np.where(forecast.pilot_default.eq(1), forecast.m_default, forecast.m_repay)
+        assert_allclose(observed[measured], forecast.loc[measured, "m_seen"], atol=1e-10)
+        assert forecast.loc[~measured, "m_seen"].isna().all()
+        assert_allclose(forecast.pred_direct_money,
+                        forecast.pilot_principal * (.10 - .55 * forecast.pred_issue_pilot_pd), atol=1e-7)
+        assert_allclose(forecast.pred_net_money, forecast.pred_direct_money + forecast.pred_info_money, atol=1e-7)
+        tol = forecast.pilot_principal * 1e-12
+        chosen = forecast.structural_eligible & forecast.pred_direct_money.lt(-tol) & forecast.pred_net_money.gt(tol)
+        assert np.array_equal(chosen, forecast.ml_selected)
+    verify_frequency_metrics(out, rows)
+    print("PASS: frequency baseline diagnosis, future-position audit, locked slope fits and sharp policy comparisons.")
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -567,12 +770,13 @@ def verify(out):
     verify_transfer(out)
     verify_frozen_policy(out)
     verify_signal_study(out)
+    verify_frequency_study(out)
     print("PASS: locked cash contrasts, profile history, cross-lender signals, transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
 def compare_pilot_tables(out, reference):
     for family in ("information_value", "pilot_replay", "pilot_transfer", "lender_pilot", "pilot_targeting",
-                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper", "finnish_pilot"):
+                   "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper", "finnish_pilot", "frequency"):
         actual = {p.name for p in out.glob(f"{family}_*.csv")}
         expected = {p.name for p in reference.glob(f"{family}_*.csv")}
         if not expected or actual != expected:

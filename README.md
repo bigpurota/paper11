@@ -4,34 +4,41 @@ HSE DSBA Research Seminar · Team 12 · Round 3 · Paper 11
 
 Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox
 
-A bank learns how people repay the loans it approves. How well can it then score *all* applicants? We implement the training and evaluation methods in Kozodoi et al., compare them with the assigned paper, and ask when issuing a loan to observe its outcome can pay for itself. [Assigned paper and appendix](https://arxiv.org/abs/2407.13009v1) · [Journal article](https://www.sciencedirect.com/science/article/pii/S0377221725000839)
+A bank observes repayment only for the loans it approves, yet its scorecard must rank every applicant. Kozodoi et al. propose bias-aware self-learning (BASL) to train on rejected applications and Bayesian evaluation to measure a scorecard on the full applicant mix. We reimplement both, test them on public data and ask which missing outcomes are worth learning. [Assigned paper and appendix](https://arxiv.org/abs/2407.13009v1) · [Journal article](https://www.sciencedirect.com/science/article/pii/S0377221725000839)
 
-[Defense PowerPoint with clickable Q&A](slides/paper11.pptx) · [Projection PDF](slides/paper11.pdf) · [Full evidence reference](slides/evidence.pdf) · [Research report](results/report.md) · [Team contributions and assessment](docs/contributions.md)
+[Defense PowerPoint](slides/paper11.pptx) · [PDF](slides/paper11.pdf) · [Research report](results/report.md) · [Contributions and methods](docs/contributions.md) · [All documents](docs/README.md)
 
-The first ten slides cover the talk in about 10¼ minutes, ending with a one-slide summary. At the end, open **slide 11** to jump to any of the sixteen backup pages and return to the menu with one click.
+## In short
 
-## Replicating the paper
+* **The simulation replicates.** Bayesian evaluation cuts the error in estimating the approved bad rate from 24.33 to 7.71 percentage points (paper: 20.10 to 9.29). BASL recovers 29.6% of the gap to full-label training, with a 95% interval of 21.2–37.3% that contains the paper's 24.8%.
+* **On public data the evaluation idea holds and the training idea does not.** With a hard historical cutoff, Bayesian evaluation lowers Taiwan's error by 0.93 points (95% interval 0.66 to 1.19). BASL never lowered defaults, and under the hard cutoff it raised Taiwan's by 2.97 points.
+* **Only outcomes that can change a decision matter.** Two approval cutoffs differ only on the borrowers between them. Outcome totals for those bands identify all 50 policy differences on our cohorts; totals by risk decile identify none.
+* **A loss-making pilot loan pays only through later decisions.** In our example it pays back after three later loans if risk persists and never if risk resets 10% of the time. A rule chosen in advance missed the only later recovery.
+* **Simple pooled rates are hard to beat.** Early defaults changed lending decisions in Dutch and Czech replays, but at the base margins the rate from other regions earned as much or more in both, and half of the correct Dutch warnings came from offsetting errors.
 
-| Experiment | Published result | Our result |
+The paper's randomized Monedo holdout is private. Our Taiwan and Prosper tests hide outcomes of loans that were funded, under a simulated historical policy, so every estimate can be checked against the truth.
+
+## Replication
+
+| Quantity | Paper | Ours |
 |---|---:|---:|
-| Simulation, error estimating the average bad rate among low-risk approvals (accepted-only → Bayesian) | 0.2010 → 0.0929 | 0.2433 → 0.0771 |
-| Simulation, share of the full-label training gap recovered by bias-aware self-learning (BASL) | 24.82% | 29.61% [21.22%, 37.28%] |
-| Empirical bad-rate estimation error (accepted-only → Bayesian) | 0.0356 → 0.0130 on Monedo | 0.01434 → 0.01350 on Taiwan; 0.01351 → 0.00354 on Prosper |
-| Margin from choosing the approval cutoff by Bayesian evaluation | Authors report +$29.27 per $375 loan at 50% loss given default | Zero difference at base pricing in both public cohorts. Each method chose the same cutoff. |
-
-Our simulation reproduces the direction of the training and evaluation results. On Taiwan, BASL increases the default rate integrated over the lowest-risk 20–40% of applicants by 0.165 percentage points relative to accepted-only training (conditional 95% interval +0.018 to +0.300). The Prosper training difference is close to zero. On both cohorts Bayesian evaluation has a smaller point error, but the paired intervals for improvement include zero. The published Spanish randomized holdout is private. Our Taiwan and Prosper comparisons hide and then reveal outcomes of previously financed accounts. [Four-metric comparison](results/paper_comparison.csv) · [Simulation design and departures](docs/simulation.md) · [Prior, masking and implementation](docs/algorithm.md)
+| Simulation: approved bad-rate estimation error, accepted-only → Bayesian | 0.2010 → 0.0929 | 0.2433 → 0.0771 |
+| Simulation: share of the full-label gap recovered by BASL | 24.82% | 29.61% [21.22%, 37.28%] |
+| Real data: estimation error, accepted-only → Bayesian | 0.0356 → 0.0130 (Monedo) | Taiwan 0.0143 → 0.0135 (soft) and 0.0327 → 0.0233 (hard cutoff); Prosper 0.0135 → 0.0035 (soft) and 0.0143 → 0.0050 (hard) |
+| Real data: approved bad rate, accepted-only → BASL | 0.2388 → 0.2211 (Monedo) | Taiwan +0.16 pp (soft) and +2.97 pp (hard); Prosper +0.01 pp (soft) and +0.14 pp (hard) |
+| Profit from choosing the cutoff by Bayesian evaluation | +$29.27 per $375 loan at 50% LGD | No difference: every evaluator chose the same cutoff |
 
 ![Published and reproduced Figure 2](results/simulation_fig2.png)
 
-## Three findings beyond the paper
+[Simulation](docs/simulation.md) · [Implementation](docs/algorithm.md) · [Hard-cutoff sensitivity](docs/hard-selection.md) · [Deviations from the paper](docs/deviations.md)
 
-| What does a bank need to learn? | Result |
-|---|---|
-| **Which missing outcomes can change the policy?** | For five nested approval cutoffs the four margin totals between adjacent cutoffs determine all ten comparisons. Concentrating a repayment audit on borrowers whose treatment would change reduces the number of labels needed. [Derivation](docs/policy-information.md) · [Sequential audit](docs/decision-audit.md) |
-| **When is a loss-making pilot worth funding?** | The expected gain from later decisions changed by the pilot must cover its loss today, after allowing for information the bank obtains anyway. Two Estonian loans passed this test in a retrospective replay. The revised selector missed the only recovery in the later Bondora test. [Break-even condition](docs/information-value.md) · [Transfer and limits](docs/pilot-holdout.md) |
-| **Can new payment information correct a stale risk estimate?** | Six-month defaults lowered the Dutch forecast from 27.19% to 7.17%. The later target realized 4.79% default exposure; the younger cohorts supplying the early signal eventually had 14.11% defaults by count. On a prespecified test at a Czech bank, the rule changed 16 of 143 decisions at the 18.18% cutoff relative to local history. The rate from other regions had lower forecast error and higher modeled payoff. [Advance warning condition](docs/early-warning.md) · [External test](docs/early-czech.md) |
+## Extensions
 
-[Detailed evidence across lenders](docs/extension-results.md) · [Figures, scenario margins and sensitivities](results/report.md)
+Each extension applies a standard tool to the lending decision and tests it on dated data; the [contributions page](docs/contributions.md) names the tools and their sources.
+
+* [Which outcomes identify a policy comparison](docs/policy-information.md), [opposite decisions under identical totals](docs/identification.md) and [how many outcomes an audit needs](docs/decision-audit.md).
+* [When one pilot loan pays for its information](docs/information-value.md) and [whether such pilots can be picked in advance](docs/pilot-holdout.md).
+* [Early defaults as a warning](docs/early-warning.md), [local versus pooled rates](docs/local-trust.md) and [why a historical rate beat boosting](docs/frequency_diagnosis.md).
 
 ## Reproduce
 
@@ -46,6 +53,6 @@ make reproduce    # rerun into an empty directory and compare each research arti
 make slides       # refresh PPTX and PDF using LibreOffice; the finished files are included
 ```
 
-Eleven fingerprinted source files total about 1.143 GB (decimal) in the ignored `data/cache/`. Use `PYTHON=/path/to/python3.12` for a differently named interpreter. The results directory contains aggregate research outputs, including paired episode-level receipts. [Dataset catalog](docs/sources.md) · [Analysis plan](docs/analysis-plan.md) · [Deviations](docs/deviations.md) · [Verification and CI](docs/verification.md)
+Eleven fingerprinted source files total about 1.143 GB (decimal) in the ignored `data/cache/`. Use `PYTHON=/path/to/python3.12` for a differently named interpreter. [Dataset catalog](docs/sources.md) · [Analysis plan](docs/analysis-plan.md) · [Verification and CI](docs/verification.md)
 
 Team 12 implemented the replication and its extensions with Codex assistance. Kozodoi and coauthors developed the original methods and conducted the Monedo study.

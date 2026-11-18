@@ -514,13 +514,50 @@ def extension_sections(out):
     ]
 
 
+def hard_selection_section(out):
+    """Soft versus hard historical acceptance on the same index, folds and models."""
+    h = pd.read_csv(out / "hard_selection.csv")
+    soft_eval = pd.read_csv(out / "evaluation_rmse.csv").query("metric == 'abr'").set_index(["dataset", "method"]).rmse
+    soft_abr = pd.read_csv(out / "training.csv").groupby(["dataset", "method"]).abr.mean()
+    rows = []
+    for dataset in ("taiwan", "prosper"):
+        def get(design, q, dataset=dataset):
+            return h[(h.dataset == dataset) & (h.design == design) & (h.quantity == q)].estimate.iloc[0]
+        for design in ("soft", "hard"):
+            if design == "soft":
+                ev = (soft_eval[(dataset, "accepts")], soft_eval[(dataset, "bayes")])
+                tr = (soft_abr[(dataset, "accepts")], soft_abr[(dataset, "basl")])
+            else:
+                ev = (get("hard", "accepts_eval_rmse_abr"), get("hard", "bayes_eval_rmse_abr"))
+                tr = (get("hard", "accepts_test_abr"), get("hard", "basl_test_abr"))
+            rows.append([NAMES[dataset], design, f"{100 * get(design, 'accepted_share'):.1f}%",
+                         f"{100 * get(design, 'bad_rate_accepted'):.1f}% / {100 * get(design, 'bad_rate_rejected'):.1f}%",
+                         f"{100 * ev[0]:.2f} → {100 * ev[1]:.2f}", f"{100 * tr[0]:.2f}% → {100 * tr[1]:.2f}%"])
+    frame = pd.DataFrame(rows, columns=["Data", "Historical policy", "Accepted", "Bad rate, accepted / rejected",
+                                        "ABR estimation error, pp (accepted-only → Bayesian)",
+                                        "Test ABR (accepted-only → BASL)"])
+    return [
+        "## Does a hard historical cutoff change the conclusions?",
+        "The main design accepts each applicant with probability 0.05 + 0.90 expit(index), so every applicant can be "
+        "observed. This sensitivity keeps the index, folds, seeds, models and priors, and accepts the applicants with the "
+        "highest index, keeping tied values together and matching the acceptance share as closely as the ties allow. "
+        "Historical rejects then never resemble accepts on the index, as under a scorecard cutoff.",
+        table(frame),
+        "Stronger selection makes accepted-only evaluation worse and Bayesian evaluation helps more; on Taiwan the paired "
+        "interval now excludes zero. BASL becomes clearly worse on Taiwan. Its pseudo-labels come from a logistic model, "
+        "and a logistic scorecard fitted to the hard-cutoff accepts has test ABR "
+        f"{100 * h[(h.dataset == 'taiwan') & (h.quantity == 'logit_test_abr')].estimate.iloc[0]:.1f}% on the whole Taiwan "
+        "population, consistent with poor extrapolation to the rejects. The check was added after the main results and is "
+        "exploratory. [Design and interpretation](../docs/hard-selection.md) · [All quantities](hard_selection.csv)",
+    ]
+
+
 def summary_section(out, sims, comp, contrast):
     """Headline results, recomputed from the same tables as the sections below."""
     sim = sims[sims.metric == "abr"].set_index("statistic")
     pp = lambda v: f"{100 * v:.2f}"
     ci = contrast.set_index(["dataset", "contrast"])
     t2 = comp[(comp.table == 2) & (comp.metric == "abr")].set_index("method")
-    t3 = comp[(comp.table == 3) & (comp.metric == "abr")].set_index("method")
     info = pd.read_csv(out / "policy_information_summary.csv").groupby("design").sum(numeric_only=True)
     frontier = pd.read_csv(out / "information_value_frontier.csv")
     base = frontier[(frontier.discount == 1) & (frontier.delay == 1) & (frontier.fee == 0)].set_index("reset")
@@ -531,6 +568,14 @@ def summary_section(out, sims, comp, contrast):
     lower = dutch[["local", "broader"]].min(axis=1)
     hits = int((dutch.six_month_below_both & dutch.realized_below_both).sum())
     own_hits = int(((dutch.revised_young_year_rate < lower) & dutch.realized_below_both).sum())
+    hard = pd.read_csv(out / "hard_selection.csv").set_index(["dataset", "quantity"])
+    hard = hard[~hard.index.duplicated()]
+
+    def hard_interval(dataset, name):
+        row = hard.loc[(dataset, name)]
+        signed = lambda v: f"{100 * v:+.2f}".replace("-", "−")
+        return f"{signed(row.estimate)} pp [{signed(row.ci_low)}, {signed(row.ci_high)}]"
+
     within = pd.read_csv(out / "evaluation.csv").query("metric == 'abr'").copy()
     within["squared"] = within.within_cohort_error ** 2
     same = within.groupby(["dataset", "method"]).squared.mean().pow(.5)
@@ -551,11 +596,16 @@ def summary_section(out, sims, comp, contrast):
         f"but the paired changes, {interval('taiwan','bayes_minus_accepts_rmse_abr')} and {interval('prosper','bayes_minus_accepts_rmse_abr')}, "
         f"include zero. BASL changes ABR by {interval('taiwan','basl_minus_accepts_abr')} on Taiwan and "
         f"{interval('prosper','basl_minus_accepts_abr')} on Prosper. At 50% LGD every evaluator picks the same cutoff, "
-        "so the paper's profit gain does not appear here. Two cautions: our simulated approval gives every applicant a 5–95% "
-        "chance, so the accepted sample covers almost everyone and leaves BASL little to correct; and on the same Taiwan "
-        f"cohort, with no change of population, Bayesian evaluation is worse ({pp(same['taiwan','bayes'])} versus "
-        f"{pp(same['taiwan','accepts'])} pp) because its logistic prior is weak there, while on Prosper it improves "
-        f"({pp(same['prosper','accepts'])} → {pp(same['prosper','bayes'])} pp).",
+        "so the paper's profit gain does not appear here. On the same Taiwan cohort, with no change of population, Bayesian "
+        f"evaluation is worse ({pp(same['taiwan','bayes'])} versus {pp(same['taiwan','accepts'])} pp) because its logistic "
+        f"prior is weak there; on Prosper it improves ({pp(same['prosper','accepts'])} → {pp(same['prosper','bayes'])} pp).",
+        f"- **Strength of selection.** Our main design gives every applicant a 5–95% chance of approval. With a hard cutoff "
+        f"on the same index, Bayesian evaluation lowers Taiwan's ABR estimation error from {pp(hard.loc[('taiwan','accepts_eval_rmse_abr'),'estimate'])} "
+        f"to {pp(hard.loc[('taiwan','bayes_eval_rmse_abr'),'estimate'])} pp, a change of {hard_interval('taiwan','bayes_minus_accepts_rmse_abr')} that "
+        f"excludes zero, while BASL raises its default rate by {hard_interval('taiwan','basl_minus_accepts_abr')}. On Prosper "
+        f"the error falls from {pp(hard.loc[('prosper','accepts_eval_rmse_abr'),'estimate'])} to {pp(hard.loc[('prosper','bayes_eval_rmse_abr'),'estimate'])} pp "
+        f"and BASL changes ABR by {hard_interval('prosper','basl_minus_accepts_abr')}. The evaluation idea survives strong "
+        "selection; the training idea does not in these cohorts. This check was added after the main results.",
         f"- **Which outcomes decide a policy.** Totals for the four bands between five cutoffs identify "
         f"{int(info.loc['expansion_bands','pairs_exact_at_actual_binary_totals'])} of {int(info.loc['expansion_bands','n_policy_pairs'])} "
         f"pairwise differences; totals for ten prior-risk deciles identify {int(info.loc['prior_deciles','pairs_exact_at_actual_binary_totals'])}.",
@@ -623,6 +673,7 @@ def write_report(out, comp):
         "Training comparisons use the same test borrowers under both models. Evaluation-error comparisons assign each borrower one shared Poisson weight wherever it recurs across folds. Intervals are conditional on fitted models and logged decisions. Both empirical intervals for the change in ABR estimation error include zero. Zero conditional policy variance at the base LGD means the methods took the same decisions on these cases.",
         "## Conditional lending policy",table(bp),
         "The entries are margin in units of principal per arriving applicant using an assumed 10% return if repaid. Issuance rates, per-issued-unit margins and numerical cutoffs are in [policy.csv](policy.csv). At 50% LGD all three estimators select the upper end of the allowed rate grid, so the realized difference is exactly zero. The paper’s stated gain in profit depends on its pricing, approval decisions and Spanish borrower population.",
+        *hard_selection_section(out),
         "## Can a small randomized audit improve ABR measurement?",table(audit),
         "For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both designs reveal the same number of outcomes. Financial exploration costs may differ. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.",
         *extension_sections(out),

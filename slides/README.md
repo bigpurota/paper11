@@ -10,7 +10,7 @@ Open the [defense PowerPoint](paper11.pptx) or [defense PDF](paper11.pdf) for th
 | 0:25–1:20 | 2 | Use Monedo’s 39% and 66% bad rates to explain how the old policy selects the measured sample. |
 | 1:20–2:25 | 3 | Distinguish learning a score from evaluating a fixed score. |
 | 2:25–3:25 | 4 | Trace the same comparison through the paper figure and our simulation. |
-| 3:25–4:50 | 5 | Compare evaluation error and approved default rates on Monedo, Taiwan and Prosper. Explain the holdout design and uncertainty. |
+| 3:25–4:50 | 5 | Compare evaluation error and approved default rates on Monedo, Taiwan and Prosper under soft and hard simulated selection. Say which idea transfers. |
 | 4:50–5:45 | 6 | Add the margins of the borrower groups between two approval cutoffs. |
 | 5:45–6:45 | 7 | Compare the loss on one experimental loan with the future gains its repayment could unlock. |
 | 6:45–8:05 | 8 | Use the early Dutch cohorts to distinguish an observable warning from a future default rate. |
@@ -33,8 +33,8 @@ The seminar's 15-minute format leaves room to expand the same ten slides. Spend 
 | Question | Short answer | Page |
 |---|---|---:|
 | Taiwan and Prosper loans were all funded. How can they test sampling bias? | We impose a known approval rule on pre-outcome features and hide the outcomes of the simulated rejects, so every estimate can be checked against the truth. | 12 |
-| Why did BASL raise defaults on Taiwan? | Our simulated approval is soft: everyone had a 5–95% chance, so accepts cover almost the whole population and BASL's pseudo-labels mostly add noise. AUC is unchanged, pAUC falls and the ABR change of +0.16 pp [+0.02, +0.30] excludes zero. A hard-cutoff policy is the natural next test. | 14 |
-| Did Bayesian evaluation really help on Taiwan? | Not as a selection correction. On the same cohort, with no change of population, its error is 1.79 pp against 0.59 for accepted labels, because the logistic prior is weak on Taiwan. On Prosper the same check falls from 1.13 to 0.13 pp. | 13 |
+| Why did BASL raise defaults on Taiwan? | Not because selection was too mild. Under soft selection the increase is +0.16 pp [+0.02, +0.30]; with a hard cutoff on the same index it is +2.97 pp [+2.55, +3.33]. BASL's pseudo-labels come from a logistic model, and a logistic scorecard fitted to the hard-cutoff accepts has ABR 32% on the whole population, so the labels extrapolate poorly. | 5 |
+| Did Bayesian evaluation really help on Taiwan? | Under soft selection, not as a selection correction: on the same cohort its error is 1.79 pp against 0.59 for accepted labels, because the logistic prior is weak. With a hard cutoff it clearly helps, −0.93 pp [−1.19, −0.66]. | 5, 13 |
 | Were the Dutch warnings skill or luck? | Partly luck. The conversion undershot the young cohorts it measured; with their exact year-one rate it would have warned on 4 dates, 3 correctly, instead of 7 and 6. The independent Czech test is weaker. | 26 |
 | Are these methods new? | The tools are standard: expected value of sample information, partial identification, odds-ratio sensitivity, credibility weighting and chain-ladder development. The contribution is applying them to lending decisions and testing them on dated data. | — |
 | Twenty seeds and forty batches are fewer than the paper's runs. | Intervals resample whole seeds, and the paper's 24.8% recovery lies inside our 21.2–37.3%. | 4 |

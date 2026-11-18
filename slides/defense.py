@@ -178,10 +178,20 @@ def reserve_details(slide, notes, topic, fields):
                         ("text-64-574", conclusion), ("text-64-674", source)):
         label(sh[name], value)
     tbl = slide.find(".//a:tbl", NS)
-    rows = tbl.findall("a:tr", NS)
-    if len(table) < len(rows):
+    while len(tbl.findall("a:tr", NS)) > len(table):
         # Retain the bottom ruled row from the source table.
-        tbl.remove(rows[-2])
+        tbl.remove(tbl.findall("a:tr", NS)[-2])
+    # The talk slide used as the prototype may change its layout; fix this page's own.
+    row_height = 50
+    for tr in tbl.findall("a:tr", NS):
+        tr.set("h", str(9525 * row_height))
+    frame = slide.find(".//p:graphicFrame/p:xfrm", NS)
+    frame.find("a:off", NS).set("y", str(9525 * 244))
+    frame.find("a:ext", NS).set("cy", str(9525 * row_height * len(table)))
+    for name, y, height in (("text-64-458", 458, 66), ("text-64-574", 574, 80)):
+        xfrm = sh[name].find("p:spPr/a:xfrm", NS)
+        xfrm.find("a:off", NS).set("y", str(9525 * y))
+        xfrm.find("a:ext", NS).set("cy", str(9525 * height))
     for tr, values in zip(tbl.findall("a:tr", NS), table, strict=True):
         for cell, value in zip(tr.findall("a:tc", NS), values, strict=True):
             set_text(cell.find("a:txBody", NS), value)

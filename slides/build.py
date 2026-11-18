@@ -372,6 +372,19 @@ def result_fields():
                                                         n_audited=50)["audit_rmse"])
         fields[f"{key}_audit_prior"] = number(one(audits, dataset=dataset, design="all_rejects",
                                                   n_audited=50)["prior_only_rmse"])
+    # Hard-cutoff sensitivity: same index, folds and models, deterministic historical acceptance.
+    hard = read_table("hard_selection")
+    for key, dataset in [("tw", "taiwan"), ("pr", "prosper")]:
+        def value(q, dataset=dataset):
+            return float(one(hard, dataset=dataset, design="hard", quantity=q)["estimate"])
+        fields[f"{key}_hard_eval_a"] = number(value("accepts_eval_rmse_abr"))
+        fields[f"{key}_hard_eval_b"] = number(value("bayes_eval_rmse_abr"))
+        fields[f"{key}_hard_tr_a"] = percent(value("accepts_test_abr"))
+        fields[f"{key}_hard_tr_b"] = percent(value("basl_test_abr"))
+        for label, q in [("eval", "bayes_minus_accepts_rmse_abr"), ("basl", "basl_minus_accepts_abr")]:
+            row = one(hard, dataset=dataset, design="hard", quantity=q)
+            fields[f"{key}_hard_{label}_delta"] = signed(row["estimate"]).replace("-", "−")
+            fields[f"{key}_hard_{label}_ci"] = f"[{signed(row['ci_low'])}, {signed(row['ci_high'])}]".replace("-", "−")
     # Same-cohort ABR estimation error: the selection correction without any population transfer.
     within = matching(read_table("evaluation"), metric="abr")
     for key, dataset in [("tw", "taiwan"), ("pr", "prosper")]:

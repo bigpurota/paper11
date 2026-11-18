@@ -8,7 +8,9 @@ This report uses the assigned preprint and public borrower records. An approval 
 
 - **Simulation.** Bayesian evaluation cuts the error in estimating ABR from 24.33 to 7.71 pp (paper: 20.10 to 9.29). BASL recovers 29.6% of the gap to full-label training (95% interval 21.2% to 37.3%; paper 24.8%).
 
-- **Public cohorts.** Bayesian evaluation lowers the ABR estimation error on Taiwan (1.43 → 1.35 pp) and Prosper (1.35 → 0.35 pp), but the paired changes, −0.08 pp [−0.95, +0.78] and −1.00 pp [−1.33, +0.53], include zero. BASL changes ABR by +0.16 pp [+0.02, +0.30] on Taiwan and +0.01 pp [−0.22, +0.26] on Prosper. At 50% LGD every evaluator picks the same cutoff, so the paper's profit gain does not appear here. Two cautions: our simulated approval gives every applicant a 5–95% chance, so the accepted sample covers almost everyone and leaves BASL little to correct; and on the same Taiwan cohort, with no change of population, Bayesian evaluation is worse (1.79 versus 0.59 pp) because its logistic prior is weak there, while on Prosper it improves (1.13 → 0.13 pp).
+- **Public cohorts.** Bayesian evaluation lowers the ABR estimation error on Taiwan (1.43 → 1.35 pp) and Prosper (1.35 → 0.35 pp), but the paired changes, −0.08 pp [−0.95, +0.78] and −1.00 pp [−1.33, +0.53], include zero. BASL changes ABR by +0.16 pp [+0.02, +0.30] on Taiwan and +0.01 pp [−0.22, +0.26] on Prosper. At 50% LGD every evaluator picks the same cutoff, so the paper's profit gain does not appear here. On the same Taiwan cohort, with no change of population, Bayesian evaluation is worse (1.79 versus 0.59 pp) because its logistic prior is weak there; on Prosper it improves (1.13 → 0.13 pp).
+
+- **Strength of selection.** Our main design gives every applicant a 5–95% chance of approval. With a hard cutoff on the same index, Bayesian evaluation lowers Taiwan's ABR estimation error from 3.27 to 2.33 pp, a change of −0.93 pp [−1.19, −0.66] that excludes zero, while BASL raises its default rate by +2.97 pp [+2.55, +3.33]. On Prosper the error falls from 1.43 to 0.50 pp and BASL changes ABR by +0.14 pp [−0.09, +0.40]. The evaluation idea survives strong selection; the training idea does not in these cohorts. This check was added after the main results.
 
 - **Which outcomes decide a policy.** Totals for the four bands between five cutoffs identify 50 of 50 pairwise differences; totals for ten prior-risk deciles identify 0.
 
@@ -113,6 +115,19 @@ Training comparisons use the same test borrowers under both models. Evaluation-e
 | Taiwan | 1.0000 | 0.0067 | 0.0062 | 0.0067 | -0.0006 |
 
 The entries are margin in units of principal per arriving applicant using an assumed 10% return if repaid. Issuance rates, per-issued-unit margins and numerical cutoffs are in [policy.csv](policy.csv). At 50% LGD all three estimators select the upper end of the allowed rate grid, so the realized difference is exactly zero. The paper’s stated gain in profit depends on its pricing, approval decisions and Spanish borrower population.
+
+## Does a hard historical cutoff change the conclusions?
+
+The main design accepts each applicant with probability 0.05 + 0.90 expit(index), so every applicant can be observed. This sensitivity keeps the index, folds, seeds, models and priors, and accepts the applicants with the highest index, keeping tied values together and matching the acceptance share as closely as the ties allow. Historical rejects then never resemble accepts on the index, as under a scorecard cutoff.
+
+| Data | Historical policy | Accepted | Bad rate, accepted / rejected | ABR estimation error, pp (accepted-only → Bayesian) | Test ABR (accepted-only → BASL) |
+|---|---|---|---|---|---|
+| Taiwan | soft | 63.7% | 17.4% / 30.4% | 1.43 → 1.35 | 7.20% → 7.37% |
+| Taiwan | hard | 67.3% | 12.2% / 42.4% | 3.27 → 2.33 | 8.53% → 11.50% |
+| Prosper | soft | 56.5% | 8.2% / 16.5% | 1.35 → 0.35 | 3.40% → 3.41% |
+| Prosper | hard | 56.4% | 6.5% / 18.6% | 1.43 → 0.50 | 3.62% → 3.77% |
+
+Stronger selection makes accepted-only evaluation worse and Bayesian evaluation helps more; on Taiwan the paired interval now excludes zero. BASL becomes clearly worse on Taiwan. Its pseudo-labels come from a logistic model, and a logistic scorecard fitted to the hard-cutoff accepts has test ABR 32.4% on the whole Taiwan population, consistent with poor extrapolation to the rejects. The check was added after the main results and is exploratory. [Design and interpretation](../docs/hard-selection.md) · [All quantities](hard_selection.csv)
 
 ## Can a small randomized audit improve ABR measurement?
 

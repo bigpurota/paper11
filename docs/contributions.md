@@ -2,6 +2,15 @@
 
 The reference point is the assigned July 2024 preprint, including its online appendix. The original authors introduced BASL and Bayesian scorecard evaluation. They ran a feedback simulation, compared methods on an independently randomized Monedo holdout, varied prior quality, studied missingness and varied loss given default. Our replication implements that work independently. Our research additions ask the following questions.
 
+## In brief
+
+* **Replication.** An independent implementation of BASL, Bayesian evaluation and the feedback simulation, tested on two public cohorts under soft and hard simulated selection. Bayesian evaluation transfers; BASL does not lower defaults on public data.
+* **One idea across the extensions.** A missing outcome is worth learning only if it can change a lending decision. That idea decides which totals to request, how many outcomes an audit needs and when a loss-making pilot pays.
+* **Tests.** Each extension was locked before its external test where possible. Most refinements tied with or lost to simple pooled rates out of sample, and we report those results.
+* **What is new.** The tools are standard; the contribution is their application to lending, the decision quantities and the dated empirical tests listed below.
+
+## Questions, experiments and results
+
 | New question | Experiment and result | What it changes |
 |---|---|---|
 | Which measurements suffice for an entire menu of lending rules? | Apply the row-space criterion for estimable linear functions. For five distinct nested approval rules the four adjacent bands give a minimal basis for exact margin differences when each band carries independently unknown expected outcomes. | This gives a data-independent way to specify what a lender would want to measure before commissioning an audit. [Conditions, computation and examples](policy-information.md) |

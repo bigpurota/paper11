@@ -38,3 +38,7 @@ The Dutch reconstruction is explanatory. The new test of the trust rule at Wells
 ## Early payment evidence
 
 We fixed the six-month conversion, the secondary three-month marker, the next external bank, two lending thresholds and paired calendar-block comparisons before reading Czech outcomes. The known eight Dutch books motivated the question. [Dated protocol](https://github.com/bigpurota/paper11/commit/e573d37)
+
+## Selection strength, added after the main results
+
+The review of the submitted results found that the simulated approval rule gives every applicant a 5–95% chance. We then added one sensitivity that replaces it with a hard cutoff on the same index and acceptance share, keeping every other choice. It was specified and run after the main results were known and is reported as exploratory. [Design and results](hard-selection.md)

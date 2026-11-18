@@ -145,6 +145,29 @@ def pilot_fields():
     }
 
 
+def transfer_fields():
+    summary = matching(read_table("pilot_targeting_summary"), forecast="fixed_risk", outcome="scenario")
+    fields = {}
+    for label, archive, terms in [("sba", "sba_7a", "early_7a"), ("eu", "bondora", "at_least_36m")]:
+        data = matching(summary, archive=archive, terms=terms)
+        auc = one(data, metric="auc_positive")
+        fields[f"t_{label}_count"] = f"{auc['selected']} / {auc['eligible']}"
+        fields[f"t_{label}_auc"] = f"{float(auc['estimate']):.2f}"
+        fields[f"t_{label}_gain"] = f"{100*float(one(data, metric='rule_gain')['estimate']):+.2f}".replace("-","−")
+    fields["t_sba_flip"] = one(read_table("pilot_transfer_summary"), terms="early_7a", group="selected")["seed_flips"]
+    fields["t_eu_flip"] = one(read_table("lender_pilot_summary"), seasoning="36m",
+                              strategy="selected", valuation="forced")["changed"]
+    key = dict(country="EE", customer="returning", pilot_month="2018-10")
+    origin = one(read_table("lender_pilot_episodes"), **key)
+    late = one(read_table("lender_pilot_followup"), **key)
+    fields["x_before"] = percent(origin["q_fresh"])
+    fields["x_after"] = percent(origin["q_with_pilot"])
+    fields["x_cut"] = percent(float(origin["repay_margin"]) / (float(origin["repay_margin"]) - float(origin["default_margin"])))
+    for label, column in (("loss","euro_pilot"), ("avoid","euro_gross"), ("net","euro_net")):
+        fields["x_"+label] = f"{abs(float(late[column])):,.2f}"
+    return fields
+
+
 def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
@@ -155,6 +178,7 @@ def result_fields():
     cohort = read_table("cohort")
     fields = decision_fields()
     fields.update(pilot_fields())
+    fields.update(transfer_fields())
     for key, dataset in [("orig", "monedo"), ("tw", "taiwan"), ("pr", "prosper")]:
         for label, method in [("a", "accepts"), ("i", "ipw"), ("b", "bayes")]:
             fields[f"{key}_eval_{label}"] = number(one(comparison, table=2, method=method, metric="abr")[dataset])

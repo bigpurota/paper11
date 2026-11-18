@@ -14,3 +14,7 @@ Team 12 • DSBA Research Seminar • Round 3 • assigned arXiv:2407.13009v1, m
 ## Follow-up on the value of an individual repayment
 
 The prior three-application exercise motivated a subsequent one-pilot experiment. The theory specifies timing, dependence and the degree of later adaptation. The SBA extension uses another funded-loan archive to replay a dated one-pilot rule, a forced pilot and the same no-pilot decision with refreshed common information. Study choices and secondary specifications are described with the corresponding results. This extension is exploratory. [Theory and grid](information-value.md) · [Chronological SBA design](pilot-replay.md)
+
+## Other lending archives
+
+The transfer designs specify the information date, primary portfolio, candidate loan, policy threshold and comparison against newly available public risk estimates. Archive draws and parameters were fixed before scoring those cohorts. Conditional examples discovered during examination and subsequent attempts to follow the European cash flows for longer are labeled retrospective. [SBA 7(a)](pilot-transfer.md) · [Bondora](lender-pilot.md) · [Forecast and evaluation design](pilot-targeting.md)

@@ -22,6 +22,9 @@ def run(reference, cache):
                         ["-m","paper11.exploration"],
                         ["-m","paper11.information_value"],
                         ["-m","paper11.pilot_replay","--cache",str(cache)],
+                        ["-m","paper11.pilot_transfer","--cache",str(cache)],
+                        ["-m","paper11.lender_pilot","--cache",str(cache)],
+                        ["-m","paper11.pilot_targeting"],
                         ["-m","paper11.rct","--cache",str(cache)],
                         ["scripts/report.py"], ["scripts/verify.py"]):
             subprocess.run([sys.executable,*command,"--out",tmp],env=env,check=True)

@@ -210,6 +210,48 @@ def verify_cost_of_a_pilot(out):
                 assert_allclose(row.mean_per_eligible_episode, actual, atol=1e-9, equal_nan=True)
 
 
+def verify_transfer(out):
+    transfer = pd.read_csv(out / "pilot_transfer_episodes.csv")
+    ledger = pd.read_csv(out / "lender_pilot_episodes.csv")
+    late = pd.read_csv(out / "lender_pilot_followup.csv")
+    stats = pd.read_csv(out / "pilot_targeting_summary.csv")
+    forecasts = pd.read_csv(out / "pilot_targeting_forecasts.csv")
+    keys = ["archive", "terms", "outcome", "forecast"]
+    assert not stats.duplicated(keys+["metric"]).any()
+    assert not forecasts.duplicated(keys+["group","origin"]).any()
+    for label, raw in forecasts.groupby(keys):
+        subset = stats
+        for name, value in zip(keys, label):
+            subset = subset[subset[name] == value]
+        values = subset.set_index("metric")
+        sample = raw[raw.eligible]
+        assert values.selected.eq(sample.selected.sum()).all() and values.eligible.eq(len(sample)).all()
+        assert values.strict_selected.eq((sample.selected & sample.strict).sum()).all()
+        assert_allclose(values.loc["rule_gain","estimate"], (sample.selected*sample.net).mean(), atol=1e-9)
+        assert_allclose(values.loc["pilot_all_gain","estimate"], sample.net.mean(), atol=1e-9)
+        positive = sample.net > 1e-10
+        if positive.nunique() == 2:
+            from sklearn.metrics import roc_auc_score
+            assert_allclose(values.loc["auc_positive","estimate"], roc_auc_score(positive,sample.score), atol=1e-9)
+    for _, rows in transfer.groupby("terms"):
+        assert len(rows) == 120 and not rows.duplicated(["region","pilot_quarter"]).any()
+        assert_allclose(rows.seed_net, rows.seed_pilot_cash + rows.seed_gross, atol=1e-9)
+        assert_allclose(rows.forced_net, rows.forced_pilot_margin + rows.forced_gross, atol=1e-9)
+        assert ((rows.seed_pilot_cash.lt(0) & rows.seed_flip & rows.seed_net.gt(1e-10))
+                == rows.seed_loss_recovered).all()
+    episode_keys = ["country", "customer", "pilot_month", "future_month"]
+    pair = ledger.merge(late, on=episode_keys, validate="one_to_one", suffixes=("_early","_late"))
+    assert len(pair)==len(late)==len(ledger) and pair.complete.all()
+    assert (pair.future_n==pair.matched_continuations).all() and pair.matched_pilot.all()
+    assert (pair.action_changed_early == pair.action_changed_late).all()
+    assert_allclose(pair.forced_pilot+pair.forced_gross, pair.forced_net, atol=1e-9)
+    for date in ("early","late"):
+        a, b, c = [pair[f"euro_{col}_{date}"] for col in ("pilot","gross","net")]
+        assert_allclose(a+b,c,atol=1e-6)
+        assert ((a.lt(0)&pair.action_changed_early&c.gt(1e-10))==pair[f"euro_covered_{date}"]).all()
+    assert (out / "lender_pilot_cash.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -256,11 +298,12 @@ def verify(out):
     verify_identification_and_audit(out)
     verify_information_and_learning(out)
     verify_cost_of_a_pilot(out)
-    print("PASS: EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
+    verify_transfer(out)
+    print("PASS: transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
 def compare_pilot_tables(out, reference):
-    for family in ("information_value", "pilot_replay"):
+    for family in ("information_value", "pilot_replay", "pilot_transfer", "lender_pilot", "pilot_targeting"):
         actual = {p.name for p in out.glob(f"{family}_*.csv")}
         expected = {p.name for p in reference.glob(f"{family}_*.csv")}
         if not expected or actual != expected:

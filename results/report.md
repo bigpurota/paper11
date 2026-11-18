@@ -148,6 +148,22 @@ The administrative extract has 111,066 rows, with 92,410 eligible disbursements.
 
 Requiring a pilot in every eligible episode gave +0.019 in gross continuation gain and -0.364 in direct pilot margin. Net gain versus the updated no-pilot policy was -0.345 [-0.529, -0.194]. The financial terms are scenarios applied to three-year recorded charge-offs. Results concern historically financed loans and the specified decision rule. [Replay protocol, comparators and sensitivity](../docs/pilot-replay.md)
 
+### Could the bank identify promising pilots in advance?
+
+Each rule receives only information available at origination and pays the direct pilot margin once. A new forecast allows the public risk estimate to change while repayment is pending, using only earlier public updates that have already arrived. Both rules face the same future opportunities.
+
+Bondora, at least three years of subsequent payments: the fixed-risk rule selected 2 of 100 eligible pilots. AUC for positive realized scenario gain was 0.609 (95% four-quarter block interval 0.478 to 0.734). Net versus skipping all pilots was +0.200 per eligible episode when one loan has principal 100. Positive net can also come from collecting the pilot itself.
+
+SBA 7(a), using early local pricing: the fixed-risk rule selected 16 of 85 eligible pilots. AUC for positive realized scenario gain was 0.416 (95% four-quarter block interval 0.206 to 0.624). Net versus skipping all pilots was -0.691 per eligible episode when one loan has principal 100. Positive net can also come from collecting the pilot itself.
+
+SBA 7(a) offers an existence example. In the West, one actual failed pilot from 2002 Q2 could have changed the rule from funding to declining the same 25 later loans. Using reported charge-off amounts and the hypothetical performing margin gives -98.00 on the pilot, +209.13 on subsequent decisions and +111.14 overall. We identified this branch after scoring. Its region-quarter was selected up front, but the precommitted borrower draw chose a different pilot. [Exact branches and calendar windows](../docs/pilot-transfer.md)
+
+In the extended Bondora window, the October 2018 Estonian pilot lost €267.00. Relative to lending to all 25 subsequent borrowers in November 2019, the pilot-informed refusal would avoid €16,211.29 in cash shortfall as of May 24, 2024. The paired net is €15,944.29. Across the 3 selected pilots that changed a decision, 2 still covered their actual euro loss at this date. This follow-up uses the same loan identities, and outstanding collections could change the result. These decisions were replayed.
+
+![Paired cumulative cash gains at the two valuation dates](lender_pilot_cash.png)
+
+In Kenya the bank used its TOBOA experiment with previously rejected borrowers to revise the M-Shwari scorecard. The case study reports acceptance rising from 40% to 47%. It gives no incremental profit attributable to that change. [Field evidence](../docs/observed-pilot-evidence.md) · [European payment archives](../docs/lender-pilot.md) · [Forecasts, units and uncertainty](../docs/pilot-targeting.md)
+
 ### Can the archive identify which policy earns more?
 
 Hold all visible outcomes fixed. Grant access to the actual number of defaults in each of ten groups of hidden applicants ranked by the frozen prior. The grouping is fixed before reading the true aggregate counts. On Taiwan, moving these same defaults within groups yields both negative and positive gains for the same 30% to 50% expansion in every split. The mean bounds are -0.82 to +0.99 pp of scenario margin per applicant. On Prosper these ten true counts are sufficient to determine a positive sign (+0.20 to +1.47 pp). These aggregates use retrospective information unavailable to the original lender. A second sensitivity case substitutes counts obtained by rounding the prior probabilities. We also solve the minimax-regret choice among five cutoffs and audit the frozen rule on holdout. [Construction, proof and results](../docs/identification.md)

@@ -30,3 +30,7 @@ The dated design record precedes fitting. This page records source ambiguities, 
 ## Exploratory lending
 
 We developed the general one-pilot threshold after studying the adaptive three-application example. The assumption that the lender receives only one additional outcome within the planning horizon defines a different policy class. We report both. Parameter-grid counts describe chosen combinations and carry no probability interpretation. The SBA 504 test uses an independent archive of financed loans and scenario payoffs. Its design and data-timing choices are documented with the replay. [Theory](information-value.md) · [Protocol](pilot-replay.md)
+
+## Transfer and late payments
+
+The 7(a) test keeps the 504 financial terms as its first specification, then recalibrates the same pricing formula on mature 7(a) outcomes before the decision period. The main US calculation uses a pre-specified borrower draw. Searching other possible branches after the fact illustrates existence. We report their probabilities separately. The Bondora study predefines a 36-month observation minimum and a broader 12-month cohort. Apparent cash gains in the broader cohort prompted a check on a later matched export. The 2024 results use identical loan identities and frozen decisions. Computing gains again restricts measurement error from early collections but does not remove remaining collections risk. [Details and cash components](lender-pilot.md)

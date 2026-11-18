@@ -12,6 +12,16 @@ from scipy.special import expit
 from sklearn.model_selection import KFold
 
 SOURCES = {
+    "sba7a_1991_1999": (
+        "https://data.sba.gov/sites/default/files/uploaded_resources/"
+        "FOIA_7a_FY1991_FY1999_asof_260930.csv",
+        "d28df8e5d78a7aedcfb03693c5d42f0f0a38557470b5c8201cafce326e5c567d",
+    ),
+    "sba7a_2000_2009": (
+        "https://data.sba.gov/sites/default/files/uploaded_resources/"
+        "FOIA_7a_FY2000_FY2009_asof_260930.csv",
+        "e0122bce7e468fc1c4bb6f0a24100bfa0ead8c6065332a2b28cb01671ba5273e",
+    ),
     "sba504_1991_2009": (
         "https://data.sba.gov/sites/default/files/uploaded_resources/"
         "FOIA_504_FY1991_FY2009_asof_260930.csv",
@@ -47,19 +57,23 @@ def checksum(path):
 
 def fetch(name, cache):
     url, expected = SOURCES[name]
-    cache = Path(cache)
-    cache.mkdir(parents=True, exist_ok=True)
-    path = cache / (name + ".csv")
+    return fetch_pinned(url, expected, Path(cache) / (name + ".csv"))
+
+
+def fetch_pinned(url, expected, path):
+    """Retrieve an immutable research input and verify its bytes before use."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and checksum(path) == expected:
         return path
-    with tempfile.NamedTemporaryFile(dir=cache, delete=False) as f:
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as f:
         tmp = Path(f.name)
     try:
         request = Request(url, headers={"User-Agent": "Paper11-academic-replication/1.0"})
         with urlopen(request, timeout=120) as source, tmp.open("wb") as sink:
             shutil.copyfileobj(source, sink)
         if checksum(tmp) != expected:
-            raise ValueError(f"{name} source bytes differ from the published fingerprint")
+            raise ValueError(f"{path.name} source bytes differ from the published fingerprint")
         tmp.replace(path)
     finally:
         tmp.unlink(missing_ok=True)

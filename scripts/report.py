@@ -60,6 +60,75 @@ def table(frame):
                        *["| "+" | ".join(map(fmt,row))+" |" for row in frame.itertuples(index=False,name=None)]])
 
 
+def pilot_cash_plot(out):
+    initial = pd.read_csv(out / "lender_pilot_episodes.csv")
+    later = pd.read_csv(out / "lender_pilot_followup.csv")
+    keys = ["pilot_month", "country", "customer"]
+    switches = initial[initial.selected & initial.action_changed].merge(
+        later[keys + ["euro_net"]], on=keys, validate="one_to_one", suffixes=("_early", "_late"))
+    switches = switches.sort_values("pilot_month")
+    fig, ax = plt.subplots(figsize=(8.1, 3.55), layout="constrained")
+    y = np.arange(len(switches))[::-1]
+    x1 = switches.euro_net_early.to_numpy() / 1000
+    x2 = switches.euro_net_late.to_numpy() / 1000
+    ax.axvline(0, lw=1, color="#667581")
+    ax.hlines(y, np.minimum(x1,x2), np.maximum(x1,x2), color="#a7b6be", lw=2.5)
+    for values, label, marker, color, offset in [(x1, "20 July 2021", "o", "#397a96", 11),
+                                                 (x2, "24 May 2024", "D", "#963d31", -14)]:
+        ax.scatter(values, y, marker=marker, s=65, color=color, label=label, zorder=3)
+        for x, height in zip(values,y):
+            ax.annotate(f"{x:+.1f}", (x,height), xytext=(0,offset), textcoords="offset points",
+                        ha="center", va="center", color=color, fontsize=10)
+    ax.set_yticks(y, labels=[f"{r.pilot_month}   {r.country}, {r.customer}" for r in switches.itertuples()])
+    ax.set_ylim(-.56, max(len(switches)-1,0)+.55)
+    ax.set_xlabel("Net cash gain versus the refreshed no-pilot rule (€ thousands)")
+    ax.set_title("Bondora pilots that changed the next funding decision", loc="left", weight="bold", pad=32)
+    ax.legend(loc="lower left", bbox_to_anchor=(0,1.0), ncol=2, frameon=False, borderaxespad=0)
+    ax.spines[["top","right","left"]].set_visible(False)
+    ax.tick_params(axis="y",length=0)
+    fig.savefig(out / "lender_pilot_cash.png", dpi=160, metadata={"Software":"Matplotlib"})
+    plt.close(fig)
+
+
+def targeting_sections(out):
+    target = pd.read_csv(out / "pilot_targeting_summary.csv")
+    selected = target.query("forecast == 'fixed_risk' and outcome == 'scenario'")
+    selected = selected[selected.terms.isin(["early_7a", "at_least_36m"])]
+    draws = pd.read_csv(out / "pilot_transfer_episodes.csv")
+    west = draws.query("terms == 'early_7a' and region == 'West' and pilot_quarter == '2002Q2'").iloc[0]
+    lines = ["### Could the bank identify promising pilots in advance?",
+             "Each rule receives only information available at origination and pays the direct pilot margin once. A new forecast allows the public risk estimate to change while repayment is pending, using only earlier public updates that have already arrived. Both rules face the same future opportunities."]
+    for archive, data in selected.groupby("archive"):
+        summary = data.set_index("metric")
+        auc, gain = summary.loc["auc_positive"], summary.loc["rule_gain"]
+        label = "SBA 7(a), using early local pricing" if archive == "sba_7a" else "Bondora, at least three years of subsequent payments"
+        lines.append(f"{label}: the fixed-risk rule selected {auc.selected} of {auc.eligible} eligible pilots. "
+                     f"AUC for positive realized scenario gain was {auc.estimate:.3f} "
+                     f"(95% four-quarter block interval {auc.block4_low:.3f} to {auc.block4_high:.3f}). "
+                     f"Net versus skipping all pilots was {100*gain.estimate:+.3f} per eligible episode "
+                     f"when one loan has principal 100. Positive net can also come from collecting the pilot itself.")
+    loss = west.fixed_future_first_failed_pilot_cash
+    gross = west.fixed_future_recorded_gross_on_failure
+    lines.append(f"SBA 7(a) offers an existence example. In the West, one actual failed pilot from 2002 Q2 "
+                 f"could have changed the rule from funding to declining the same 25 later loans. Using reported "
+                 f"charge-off amounts and the hypothetical performing margin gives {100*loss:+.2f} on the pilot, "
+                 f"{100*gross:+.2f} on subsequent decisions and {100*(loss+gross):+.2f} overall. We identified "
+                 f"this branch after scoring. Its region-quarter was selected up front, but the precommitted "
+                 f"borrower draw chose a different pilot. [Exact branches and calendar windows](../docs/pilot-transfer.md)")
+    eu = pd.read_csv(out / "lender_pilot_followup.csv")
+    episode = eu.query("country == 'EE' and customer == 'returning' and pilot_month == '2018-10'").iloc[0]
+    later = eu[eu.selected & eu.action_changed]
+    lines.append(f"In the extended Bondora window, the October 2018 Estonian pilot lost €{-episode.euro_pilot:,.2f}. "
+                 f"Relative to lending to all {episode.portfolio_n} subsequent borrowers in November 2019, "
+                 f"the pilot-informed refusal would avoid €{episode.euro_gross:,.2f} in cash shortfall as of May 24, 2024. "
+                 f"The paired net is €{episode.euro_net:,.2f}. Across the {len(later)} selected pilots that changed a decision, "
+                 f"{later.euro_covered.sum()} still covered their actual euro loss at this date. This follow-up uses "
+                 "the same loan identities, and outstanding collections could change the result. These decisions were replayed.")
+    lines.append("![Paired cumulative cash gains at the two valuation dates](lender_pilot_cash.png)")
+    lines.append("In Kenya the bank used its TOBOA experiment with previously rejected borrowers to revise the M-Shwari scorecard. The case study reports acceptance rising from 40% to 47%. It gives no incremental profit attributable to that change. [Field evidence](../docs/observed-pilot-evidence.md) · [European payment archives](../docs/lender-pilot.md) · [Forecasts, units and uncertainty](../docs/pilot-targeting.md)")
+    return lines
+
+
 def pilot_sections(out):
     frontier = pd.read_csv(out / "information_value_frontier.csv")
     model = frontier.query("discount == 1 and delay == 1 and fee == 0").set_index("reset")
@@ -112,6 +181,7 @@ def extension_sections(out):
         f"In the illustrative persistent-regime decision model, a loan of 100 has immediate expected margin {100*persistent.iloc[0].immediate_margin:.2f}. Starting with {first} applicants available, the lender first finds funding worthwhile: its optimal total expected margin is {100*persistent.loc[first,'adaptive_value']:.2f}, versus zero under the best fixed decision. At ten opportunities the total reaches {100*persistent.loc[10,'adaptive_value']:.2f}. If each new borrower draws an independent regime, a repayment has zero value for the next decision. The horizon counts all applicants, including the pilot. Repayment on a funded loan arrives before the next decision. These are illustrative monetary units, independent of the public datasets. [Decision tree, assumptions and tests](../docs/exploration.md)",
         "![Expected value of lending to learn](exploration_value.png)",
         *pilot_sections(out),
+        *targeting_sections(out),
         "### Can the archive identify which policy earns more?",
         f"Hold all visible outcomes fixed. Grant access to the actual number of defaults in each of ten groups of hidden applicants ranked by the frozen prior. The grouping is fixed before reading the true aggregate counts. On Taiwan, moving these same defaults within groups yields both negative and positive gains for the same 30% to 50% expansion in every split. The mean bounds are {100*group_counts.loc['taiwan','gain_30_to_50_lower']:+.2f} to {100*group_counts.loc['taiwan','gain_30_to_50_upper']:+.2f} pp of scenario margin per applicant. On Prosper these ten true counts are sufficient to determine a positive sign ({100*group_counts.loc['prosper','gain_30_to_50_lower']:+.2f} to {100*group_counts.loc['prosper','gain_30_to_50_upper']:+.2f} pp). These aggregates use retrospective information unavailable to the original lender. A second sensitivity case substitutes counts obtained by rounding the prior probabilities. We also solve the minimax-regret choice among five cutoffs and audit the frozen rule on holdout. [Construction, proof and results](../docs/identification.md)",
         "### What would it take to resolve the decision?",
@@ -193,4 +263,5 @@ if __name__ == "__main__":
     parser.add_argument("--out",type=Path,default=Path("results"))
     out=parser.parse_args().out
     calibration_plot(out)
+    pilot_cash_plot(out)
     write_report(out, comparison(out))

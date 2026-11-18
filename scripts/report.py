@@ -60,6 +60,28 @@ def table(frame):
                        *["| "+" | ".join(map(fmt,row))+" |" for row in frame.itertuples(index=False,name=None)]])
 
 
+def pilot_sections(out):
+    frontier = pd.read_csv(out / "information_value_frontier.csv")
+    model = frontier.query("discount == 1 and delay == 1 and fee == 0").set_index("reset")
+    stable, decaying = model.loc[0.], model.loc[.10]
+    stress = pd.read_csv(out / "information_value_stress.csv")
+    cohort = pd.read_csv(out / "pilot_replay_cohort.csv").iloc[0]
+    replay = pd.read_csv(out / "pilot_replay_summary.csv")
+    primary = replay.query("sampling == 'chronological' and terms == 'early_national'")
+    chosen = primary.query("strategy == 'model'").set_index("measure")
+    forced = primary.query("strategy == 'forced'").set_index("measure")
+    chosen_net, forced_net = chosen.loc["net"], forced.loc["net"]
+    return [
+        "### The price of a single repayment observation",
+        f"Compare the expected loss on the pilot with the discounted increase in the best future policy's value after observing that repayment. Both policies can use the same other information. On 100 units of principal the persistent example loses {-100*stable.prior_margin:.4f} up front and adds {100*stable.evsi_at_ten/10:.6f} per later decision. It clears break-even at {int(stable.first_followups)} later applicants. With a 10% redraw probability the lifetime gain is bounded by {100*decaying.evsi_limit:.5f}. [General criterion and analytic proof](../docs/information-value.md) · [Sharp bounds for different pilot and follow-up risks](../docs/pilot-dependence.md)",
+        f"The grid spans {stress.scenarios.sum():,} parameter combinations. Of the {stress.loss_making.sum():,} with negative direct expected margin, a single pilot covers that loss in {stress.strictly_worthwhile_loss_making.sum():,}. Grid frequencies describe our design. [Aggregate stress results](information_value_stress.csv)",
+        "![Timing, persistence and the first profitable horizon](information_value_frontier.png)",
+        "### Does this signal change decisions on historical SBA 504 loans?",
+        f"The administrative extract has {cohort.source_rows:,} rows, with {cohort.retained:,} eligible disbursements. We compare identical regional follow-up portfolios using a common updated risk estimate. Each episode evaluates the first 25 continuation positions. The future quarterly source pools contain {cohort.continuation_pool_loans:,} financed loans. Among {chosen_net.eligible_cells} initially loss-making region-quarter episodes the plug-in rule selected {chosen_net.pilot_cells} pilots. At disclosure the signal could change the decision in {chosen_net.signal_sensitive_cells} of these. Including the pilot cash flow, the incremental margin was {100*chosen_net.mean_per_eligible_episode:+.3f} per eligible episode, in units per 100 principal on one loan (95% moving-block interval {100*chosen_net.ci_4q_low:+.3f} to {100*chosen_net.ci_4q_high:+.3f}).",
+        f"Requiring a pilot in every eligible episode gave {100*forced.loc['gross','mean_per_eligible_episode']:+.3f} in gross continuation gain and {100*forced.loc['pilot_margin','mean_per_eligible_episode']:+.3f} in direct pilot margin. Net gain versus the updated no-pilot policy was {100*forced_net.mean_per_eligible_episode:+.3f} [{100*forced_net.ci_4q_low:+.3f}, {100*forced_net.ci_4q_high:+.3f}]. The financial terms are scenarios applied to three-year recorded charge-offs. Results concern historically financed loans and the specified decision rule. [Replay protocol, comparators and sensitivity](../docs/pilot-replay.md)",
+    ]
+
+
 def extension_sections(out):
     vintage = pd.read_csv(out/"vintage_summary.csv").copy()
     for col in ("masking_rmse","forecast_rmse"):
@@ -87,8 +109,9 @@ def extension_sections(out):
         table(info[["n_policy_pairs","pairs_exact_at_actual_binary_totals","decisions_settled_at_actual_binary_totals"]].astype(int).reset_index()),
         "The rows above use the actual aggregate counts of masked outcomes, disclosed retrospectively on each validation split. Counts are comparisons across four Taiwan splits and one Prosper split. [Data-independent proof and finite-cohort check](../docs/policy-information.md)",
         "### When can a lender pay to observe a repayment?",
-        f"In the illustrative persistent-regime decision model, a loan of 100 has immediate expected margin {100*persistent.iloc[0].immediate_margin:.2f}. Starting with {first} applicants available, the lender first finds funding worthwhile: its optimal total expected margin is {100*persistent.loc[first,'adaptive_value']:.2f}, versus zero under the best fixed decision. At ten opportunities the total reaches {100*persistent.loc[10,'adaptive_value']:.2f}. If each new borrower draws an independent regime, a repayment has zero value for the next decision. The horizon is measured in decisions made after observing the preceding repayment. These are illustrative monetary units, independent of the public datasets. [Decision tree, assumptions and tests](../docs/exploration.md)",
+        f"In the illustrative persistent-regime decision model, a loan of 100 has immediate expected margin {100*persistent.iloc[0].immediate_margin:.2f}. Starting with {first} applicants available, the lender first finds funding worthwhile: its optimal total expected margin is {100*persistent.loc[first,'adaptive_value']:.2f}, versus zero under the best fixed decision. At ten opportunities the total reaches {100*persistent.loc[10,'adaptive_value']:.2f}. If each new borrower draws an independent regime, a repayment has zero value for the next decision. The horizon counts all applicants, including the pilot. Repayment on a funded loan arrives before the next decision. These are illustrative monetary units, independent of the public datasets. [Decision tree, assumptions and tests](../docs/exploration.md)",
         "![Expected value of lending to learn](exploration_value.png)",
+        *pilot_sections(out),
         "### Can the archive identify which policy earns more?",
         f"Hold all visible outcomes fixed. Grant access to the actual number of defaults in each of ten groups of hidden applicants ranked by the frozen prior. The grouping is fixed before reading the true aggregate counts. On Taiwan, moving these same defaults within groups yields both negative and positive gains for the same 30% to 50% expansion in every split. The mean bounds are {100*group_counts.loc['taiwan','gain_30_to_50_lower']:+.2f} to {100*group_counts.loc['taiwan','gain_30_to_50_upper']:+.2f} pp of scenario margin per applicant. On Prosper these ten true counts are sufficient to determine a positive sign ({100*group_counts.loc['prosper','gain_30_to_50_lower']:+.2f} to {100*group_counts.loc['prosper','gain_30_to_50_upper']:+.2f} pp). These aggregates use retrospective information unavailable to the original lender. A second sensitivity case substitutes counts obtained by rounding the prior probabilities. We also solve the minimax-regret choice among five cutoffs and audit the frozen rule on holdout. [Construction, proof and results](../docs/identification.md)",
         "### What would it take to resolve the decision?",

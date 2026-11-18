@@ -17,5 +17,7 @@ jobs:
           cache-dependency-path: requirements-lock.txt
       - name: Unit tests and submitted result checks
         run: make verify
-      - name: Download all three sources and rerun the research pipeline
+      - name: Download pinned public sources and rerun the research pipeline
         run: make all OUT=.build/ci-results
+      - name: Compare the six regenerated pilot tables with the submitted results
+        run: PYTHONPATH=src .venv/bin/python scripts/verify.py --out .build/ci-results --pilot-reference results

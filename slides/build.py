@@ -109,6 +109,42 @@ def decision_fields():
     return fields
 
 
+def pilot_fields():
+    base = matching(read_table("information_value_frontier"), discount=1, delay=1, fee=0)
+    stable, fading = one(base, reset=0), one(base, reset="0.1")
+    stress = read_table("information_value_stress")
+    adaptive = matching(read_table("exploration_values"), reset=0, first_action="fund")
+    cohort, = read_table("pilot_replay_cohort")
+    primary = matching(read_table("pilot_replay_summary"), sampling="chronological", terms="early_national")
+    model, forced = [one(primary, strategy=name, measure="net") for name in ("model", "forced")]
+    def money(row, col):
+        return f"{100*float(row[col]):+.3f}".replace("-", "−")
+    return {
+        "iv_loss": f"{-100*float(stable['prior_margin']):.4f}",
+        "iv_per": f"{10*float(stable['evsi_at_ten']):.6f}",
+        "iv_first": stable["first_followups"], "iv_total": str(int(stable["first_followups"])+1),
+        "ex_first": str(min(int(row["horizon"]) for row in adaptive)),
+        "iv_cap": f"{100*float(fading['evsi_limit']):.5f}",
+        "iv_grid": f"{sum(int(row['scenarios']) for row in stress):,}",
+        "iv_loss_cases": f"{sum(int(row['loss_making']) for row in stress):,}",
+        "iv_pay_cases": f"{sum(int(row['strictly_worthwhile_loss_making']) for row in stress):,}",
+        "sba_n": f"{int(cohort['continuation_pool_loans']):,}",
+        "sba_label": "Pilots chosen in eligible region-quarters",
+        "sba_result": f"{model['pilot_cells']} of {model['eligible_cells']}",
+        "sba_label2": "Decisions sensitive to those pilot labels",
+        "sba_result2": f"{model['signal_sensitive_cells']} of {model['pilot_cells']}",
+        "sba_text": (f"Forcing a pilot in every eligible episode changed net margin by "
+                     f"{money(forced, 'mean_per_eligible_episode')} per episode "
+                     f"(95% block interval {money(forced, 'ci_4q_low')} to {money(forced, 'ci_4q_high')}). "
+                     "One loan has principal 100."),
+        "sba_notes": (f"Net gain under the model was {money(model, 'mean_per_eligible_episode')} "
+                      f"[{money(model, 'ci_4q_low')}, {money(model, 'ci_4q_high')}], per eligible episode. "
+                      "At origination the plug-in forecast holds background risk fixed. "
+                      "Both policies receive updated common information before follow-up. "
+                      "The matched no-pilot rule can fund or decline. The separate decline-all benchmark earns zero."),
+    }
+
+
 def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
@@ -118,6 +154,7 @@ def result_fields():
     audits = read_table("audit_summary")
     cohort = read_table("cohort")
     fields = decision_fields()
+    fields.update(pilot_fields())
     for key, dataset in [("orig", "monedo"), ("tw", "taiwan"), ("pr", "prosper")]:
         for label, method in [("a", "accepts"), ("i", "ipw"), ("b", "bayes")]:
             fields[f"{key}_eval_{label}"] = number(one(comparison, table=2, method=method, metric="abr")[dataset])

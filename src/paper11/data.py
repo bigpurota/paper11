@@ -12,6 +12,11 @@ from scipy.special import expit
 from sklearn.model_selection import KFold
 
 SOURCES = {
+    "sba504_1991_2009": (
+        "https://data.sba.gov/sites/default/files/uploaded_resources/"
+        "FOIA_504_FY1991_FY2009_asof_260930.csv",
+        "8a1665d2282bc691c3eeb442f89c9ca7657e1fa8622a3efeaf49535dc3a72a08",
+    ),
     "philippines_offers": (
         "https://raw.githubusercontent.com/bfava/ensembleHTE/"
         "1a64d156edf7aa8c97bc9e928b4cda6e706cc9de/data-raw/microcredit.csv",

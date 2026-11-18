@@ -130,9 +130,23 @@ The rows above use the actual aggregate counts of masked outcomes, disclosed ret
 
 ### When can a lender pay to observe a repayment?
 
-In the illustrative persistent-regime decision model, a loan of 100 has immediate expected margin -1.41. Starting with 3 applicants available, the lender first finds funding worthwhile: its optimal total expected margin is 0.79, versus zero under the best fixed decision. At ten opportunities the total reaches 19.37. If each new borrower draws an independent regime, a repayment has zero value for the next decision. The horizon is measured in decisions made after observing the preceding repayment. These are illustrative monetary units, independent of the public datasets. [Decision tree, assumptions and tests](../docs/exploration.md)
+In the illustrative persistent-regime decision model, a loan of 100 has immediate expected margin -1.41. Starting with 3 applicants available, the lender first finds funding worthwhile: its optimal total expected margin is 0.79, versus zero under the best fixed decision. At ten opportunities the total reaches 19.37. If each new borrower draws an independent regime, a repayment has zero value for the next decision. The horizon counts all applicants, including the pilot. Repayment on a funded loan arrives before the next decision. These are illustrative monetary units, independent of the public datasets. [Decision tree, assumptions and tests](../docs/exploration.md)
 
 ![Expected value of lending to learn](exploration_value.png)
+
+### The price of a single repayment observation
+
+Compare the expected loss on the pilot with the discounted increase in the best future policy's value after observing that repayment. Both policies can use the same other information. On 100 units of principal the persistent example loses 1.4125 up front and adds 0.548125 per later decision. It clears break-even at 3 later applicants. With a 10% redraw probability the lifetime gain is bounded by 0.70889. [General criterion and analytic proof](../docs/information-value.md) · [Sharp bounds for different pilot and follow-up risks](../docs/pilot-dependence.md)
+
+The grid spans 816,480 parameter combinations. Of the 437,400 with negative direct expected margin, a single pilot covers that loss in 9,017. Grid frequencies describe our design. [Aggregate stress results](information_value_stress.csv)
+
+![Timing, persistence and the first profitable horizon](information_value_frontier.png)
+
+### Does this signal change decisions on historical SBA 504 loans?
+
+The administrative extract has 111,066 rows, with 92,410 eligible disbursements. We compare identical regional follow-up portfolios using a common updated risk estimate. Each episode evaluates the first 25 continuation positions. The future quarterly source pools contain 51,444 financed loans. Among 79 initially loss-making region-quarter episodes the plug-in rule selected 3 pilots. At disclosure the signal could change the decision in 0 of these. Including the pilot cash flow, the incremental margin was -0.022 per eligible episode, in units per 100 principal on one loan (95% moving-block interval -0.076 to +0.005).
+
+Requiring a pilot in every eligible episode gave +0.019 in gross continuation gain and -0.364 in direct pilot margin. Net gain versus the updated no-pilot policy was -0.345 [-0.529, -0.194]. The financial terms are scenarios applied to three-year recorded charge-offs. Results concern historically financed loans and the specified decision rule. [Replay protocol, comparators and sensitivity](../docs/pilot-replay.md)
 
 ### Can the archive identify which policy earns more?
 

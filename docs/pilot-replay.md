@@ -1,0 +1,49 @@
+# Would the bank have earned the cost of a test loan?
+
+On a chronological replay of US Small Business Administration (SBA) 504 loans, a simple decision rule proposed three test loans across 79 region–quarters in which the first loan was predicted to lose money. Three years later, updated public history already supported declining the next borrowers in all three episodes, regardless of what happened to the test loan. Funding a test loan in *every* eligible episode produced a small gain on the subsequent decisions and a larger loss on the pilot loans themselves.
+
+## Source and observable endpoint
+
+The SBA publishes individual loans approved since fiscal 1991. We use its 53,682,025-byte 504 program file for approvals in FY1991–FY2009, dated September 30, 2026. The official catalog assigns the U.S. Government Works license. The public input is fingerprinted with SHA-256 `8a1665d2282bc691c3eeb442f89c9ca7657e1fa8622a3efeaf49535dc3a72a08`. The code reads only project state and four administrative dates. Only aggregates are published. [Official catalog and data dictionary](https://data.sba.gov/dataset/7a-504-foia) · [Fixed release](https://data.sba.gov/sites/default/files/uploaded_resources/FOIA_504_FY1991_FY2009_asof_260930.csv)
+
+Of 111,066 approvals, 17,906 lack a first disbursement date, three have a disbursement before approval, and 747 otherwise dated projects are outside the four Census regions. The remaining 92,410 recorded disbursements had three years of follow-up by the snapshot date. We keep paid, charged-off and still outstanding cases that meet these date rules. A funded loan counts as an event if its recorded SBA charge-off date is on or before the third anniversary of its first disbursement. There were 1,501 such events in the retained file. A later charge-off is a non-event for this endpoint. All cohort dates are calendar dates. [Census region definitions](https://www.census.gov/data/data-tools/survey-explorer/geo.html) · [Cohort counts](../results/pilot_replay_cohort.csv)
+
+A 504 charge-off is an administrative event on a guaranteed business loan. The release supplies neither the population of applicants denied credit nor a complete schedule of collections, guarantee payments, costs or net returns. Every borrower in the replay actually received funding. The counterfactual choices below assign common scenario payoffs to their observed outcomes. The chronology assumes that a recorded charge-off could have been learned by the end of the three-year window. The release provides the event date but no history of when each record became reportable or was revised.
+
+## Dates, information and loan terms
+
+* **Calibrate once.** Loans disbursed in 1992–1995 supplied 27 three-year charge-offs among 9,398 borrowers. Every calibration label had matured before the first pilot quarter in 1999. Set the common break-even risk to $q_* = 27/9398 = 0.2873\%$. Under unit principal, a charge-off earns −0.50. The performing margin $r=0.50q_*/(1-q_*)=0.001441$ makes the early national population break even. These are undiscounted scenario margins for the endpoint. The 0.1441% performing margin is a deliberately thin three-year margin calibrated to an uncommon early event. With an alternative fixed performing margin of 10% and the same loss, no episode qualified as initially loss-making.
+* **Choose a pilot.** The 30 pilot quarters run from 1999 Q1 to 2006 Q2 in four project regions. On the first day of quarter $s$, use the most recent 12 complete regional disbursement quarters for which every loan has passed its third anniversary. The latest is $s-13$. Smooth the rate with a Jeffreys half event and half non-event, giving $q_s=(D+0.5)/(n+1)$. The lender knows this estimate and a fixed budget of 25 subsequent loans. It knows neither future applicants nor subsequent outcomes.
+* **Follow up.** At the beginning of $s+13$, both strategies learn the outcomes of the same more recent pre-pilot loans. Their common updated estimate uses regional quarters $s-12$ through $s-1$. Outcomes from the pilot quarter remain withheld, except for its one pilot if funded. Later cohorts also remain withheld. The 30 continuation quarters run from 2002 Q2 through 2009 Q3.
+* **Operate in chronological order.** When choosing to pilot, draw one of the quarter's three months uniformly. Starting that month, fund one member chosen at random from the first available day's batch. A missed quarter generates no loan. Every scheduled historical cell had an available batch for every start month. In the sequel, a lending decision covers the first 25 opportunities in chronological order. On the last day needed, sample uniformly within that day's tied arrivals. The 120 full pilot and continuation pools contain 39,105 and 51,444 records respectively, with overlap across episodes. Everyone faces the same continuation candidates under the paired strategies. The outputs average exactly over the random month and within-day draws. No pseudo-replicated loan draws enter the uncertainty estimates.
+
+### What the rule expects
+
+Write $m(q)=r-(r+0.50)q$. The primary comparison addresses the 79 region–quarters with $m(q_s)<0$, so the matched baseline declines the first loan. Model the regional rate locally by a beta prior with mean $q_s$ and effective size $k=20$. A pilot with outcome $y$ updates the estimated risk to $q_y=(kq_s+y)/(k+1)$. This working model assumes the loan conveys information about a common risk level that persists until the 25 subsequent opportunities. Its predicted gross information value is
+
+$$
+G_s=25\big[(1-q_s)\max(0,m(q_0))+q_s\max(0,m(q_1))-\max(0,m(q_s))\big].
+$$
+
+The model funds the pilot if $m(q_s)+G_s>0$. It holds $q_s$ fixed when *forecasting* the future environment. It does not model the regional history that will become public during the wait. At follow-up, both strategies use the refreshed estimate. An observed pilot adds one event or non-event to a prior with that refreshed mean and the same effective size of 20. An unaudited episode uses the refreshed mean alone. The *forced* policy pilots in all 79 initially loss-making cells, and uses the identical follow-up rule. The separate fixed alternative declines every opportunity for zero. The stale initial forecast would also decline throughout these 79 episodes.
+
+### What happened on the same future borrowers
+
+The **gross effect** is the difference in the scenario margin of the 25 future loans between using the pilot signal and using only the updated common information. The **net effect** adds the actual pilot's scenario margin. The entries below are mean amounts per eligible *episode* when each loan has principal 100. The denominator includes all 79 eligible episodes, including those in which the model elected to skip the pilot.
+
+| Policy | Pilot episodes | Follow-up decision could change with the pilot outcome | Gross future effect | Pilot margin | Net vs refreshed no-pilot | 95% four-quarter block interval for net |
+|---|---:|---:|---:|---:|---:|---:|
+| Pilot when predicted to pay | 3 | 0 | 0.0000 | −0.0217 | −0.0217 | [−0.0764, +0.0047] |
+| Pilot every eligible episode | 79 | 14 | +0.0192 | −0.3643 | −0.3451 | [−0.5294, −0.1937] |
+
+For example, in the Midwest in 2001 Q3 the initial estimated risk was 0.3004%, just above the 0.2873% break-even threshold. By 2004 Q4 the common regional estimate was 0.9250%. Even a pilot with no early charge-off would leave the estimate above break-even. The pilot outcome could no longer change the follow-up decision. The 25-loan opportunity set was identical under both branches.
+
+The refreshed no-pilot policy earned −2.9761 units per eligible episode. The model-pilot policy earned −2.9978, and forced exploration earned −3.3212. Always declining earned zero. Thus the incremental comparison already gives both arms access to newly available information, and the absolute comparison exposes how both can lose money when regional risk changes. In the secondary sampling design, which treats all borrowers in each quarter as exchangeable, model and forced net effects were −0.0224 and −0.3429. The threshold, smoothing, 20-observation prior, one pilot and 25-loan capacity are scenario choices. Three selected pilots give little evidence about transfer to another lender.
+
+We resampled paired quarter sums and eligible counts, retaining all four regions together. Four-quarter circular moving blocks were drawn 4,000 times using a fixed seed. Eight-quarter blocks gave net intervals of [−0.0779, +0.0045] for the model and [−0.5708, −0.1656] for forced exploration. These are descriptive sensitivity intervals for a short historical series. Overlapping history windows, economic changes and a common calibration cohort limit inference. This replay tests a particular fixed-forecast policy against an updating baseline. The general decision-theory result compares values under a correctly specified joint information model. The SBA replay neither estimates the causal impact of granting historically rejected loans nor shows that paid exploration must lose money.
+
+[Every scored regional episode](../results/pilot_replay_episodes.csv) · [Paired effects and uncertainty](../results/pilot_replay_summary.csv) · [Model with a persistent hidden regime](exploration.md)
+
+## Reproduction
+
+Run `PYTHONPATH=src .venv/bin/python -m paper11.pilot_replay --out results --cache data/cache`. A missing local input is downloaded from the dated SBA URL and checked before use. Missing estimates in the 10% stress scenario mean that no initially loss-making episodes met that scenario's eligibility condition. The [implementation](../src/paper11/pilot_replay.py) and [tests](../tests/test_pilot_replay.py) cover maturity dates, prospective draw timing, paired counterfactual arithmetic, future-label perturbations and clustered uncertainty.

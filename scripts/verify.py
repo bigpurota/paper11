@@ -140,6 +140,76 @@ def verify_information_and_learning(out):
     assert (out / "exploration_value.png").read_bytes().startswith(bytes.fromhex("89504e470d0a1a0a"))
 
 
+def verify_cost_of_a_pilot(out):
+    from paper11.pilot_dependence import signal_value
+
+    frontier = pd.read_csv(out / "information_value_frontier.csv")
+    assert not frontier.duplicated(["reset", "discount", "delay", "fee"]).any()
+    p, variance = .55 * .05 + .45 * .40, .55 * .45 * (.40 - .05)**2
+    margin = .10 - .55 * p
+    for row in frontier.itertuples():
+        # Reconstruct each feasible two-by-two table from its marginal risks and covariance.
+        by_date = [row.discount**j * signal_value(
+            p, p, p*p + variance*(1-row.reset)**j, .10, -.45) for j in range(row.delay, 11)]
+        assert_allclose(row.net_at_ten, margin - row.fee + sum(by_date), atol=1e-10)
+        assert row.ever_pays == pd.notna(row.first_followups)
+    no_decay = frontier.query("reset == 0 and discount == 1 and delay == 1 and fee == 0")
+    assert no_decay.first_followups.item() == 3
+    assert_allclose(frontier[frontier.reset == 1].evsi_at_ten, 0.)
+    stress = pd.read_csv(out / "information_value_stress.csv")
+    assert not stress.duplicated(["reset", "discount", "delay", "fee", "followups"]).any()
+    assert stress.scenarios.sum() == 816480
+    assert stress.strictly_worthwhile_loss_making.between(0, stress.loss_making).all()
+    assert stress.no_signal_value.between(0, stress.scenarios).all()
+    assert stress.max_abs_posterior_error.max() < 1e-11
+    assert (stress.mean_committed_evsi <= stress.mean_evsi + 1e-11).all()
+    bellman = pd.read_csv(out / "information_value_bellman.csv")
+    assert len(bellman) == 486
+    assert (bellman.fully_adaptive + 1e-10 >= bellman.pilot_only).all()
+    assert_allclose(bellman[bellman.horizon == 2].fully_adaptive,
+                    bellman[bellman.horizon == 2].pilot_only, atol=1e-10)
+
+    cohort = pd.read_csv(out / "pilot_replay_cohort.csv").iloc[0]
+    exclusions = ("missing_disbursement", "disbursement_precedes_approval",
+                  "outside_census_regions", "immature")
+    assert cohort.source_rows == cohort.retained + sum(cohort[key] for key in exclusions)
+    panel = pd.read_csv(out / "pilot_replay_episodes.csv")
+    summary = pd.read_csv(out / "pilot_replay_summary.csv")
+    keys = ["sampling", "terms", "pilot_quarter", "region"]
+    assert not panel.duplicated(keys).any()
+    periods = lambda column: pd.PeriodIndex(panel[column], freq="Q").asi8
+    assert (periods("future_quarter") - periods("pilot_quarter") == panel.maturity_quarters).all()
+    assert (periods("last_mature_at_pilot") + panel.maturity_quarters == periods("pilot_quarter")).all()
+    assert (periods("last_common_at_followup") < periods("pilot_quarter")).all()
+    primary = panel.query("sampling == 'chronological' and terms == 'early_national'")
+    assert len(primary) == primary.region.nunique() * primary.pilot_quarter.nunique() == 120
+    assert primary.future_pool.sum() == cohort.continuation_pool_loans
+    assert (panel.future_capacity == 25).all() and (panel.future_pool >= panel.future_capacity).all()
+    assert panel.sampling_pilot_rate.between(0, 1).all() and panel.sampling_future_rate.between(0, 1).all()
+    assert not (panel.model_pilots & ~panel.eligible).any()
+    for strategy, selection in (("model", panel.model_pilots), ("forced", panel.eligible)):
+        pilot_margin = panel.interest - (panel.interest + panel.default_loss)*panel.sampling_pilot_rate
+        future_margin = panel.future_capacity * (
+            panel.interest - (panel.interest + panel.default_loss)*panel.sampling_future_rate)
+        funded_share = (1 - panel.sampling_pilot_rate)*panel.lend_after_no_event + panel.sampling_pilot_rate*panel.lend_after_event
+        gain = selection * panel.pilot_arrival_probability * (funded_share-panel.fresh_lend.astype(int)) * future_margin
+        assert_allclose(panel[strategy+"_gross"], gain, atol=1e-9)
+        assert_allclose(panel[strategy+"_pilot_margin"], selection*panel.pilot_arrival_probability*pilot_margin, atol=1e-10)
+        assert_allclose(panel[strategy+"_total"] - panel.no_pilot_fresh, panel[strategy+"_net"], atol=1e-10)
+        for name, sub in panel.groupby(["sampling", "terms"]):
+            selected = sub[sub.eligible]
+            rows = summary[(summary.sampling == name[0]) & (summary.terms == name[1]) &
+                           (summary.strategy == strategy)]
+            assert (rows.eligible_cells == len(selected)).all()
+            for row in rows.itertuples():
+                if row.measure == "no_pilot_decline":
+                    actual = 0. if len(selected) else np.nan
+                else:
+                    col = row.measure if row.measure.startswith("no_pilot_") else strategy+"_"+row.measure
+                    actual = selected[col].mean()
+                assert_allclose(row.mean_per_eligible_episode, actual, atol=1e-9, equal_nan=True)
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -185,10 +255,27 @@ def verify(out):
     verify_extensions(out)
     verify_identification_and_audit(out)
     verify_information_and_learning(out)
-    print("PASS: information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
+    verify_cost_of_a_pilot(out)
+    print("PASS: EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
+
+
+def compare_pilot_tables(out, reference):
+    for family in ("information_value", "pilot_replay"):
+        actual = {p.name for p in out.glob(f"{family}_*.csv")}
+        expected = {p.name for p in reference.glob(f"{family}_*.csv")}
+        if not expected or actual != expected:
+            raise ValueError(f"Different set of tables for {family}")
+        for name in sorted(expected):
+            pd.testing.assert_frame_equal(pd.read_csv(out / name), pd.read_csv(reference / name),
+                                          check_exact=False, rtol=1e-8, atol=1e-10, obj=name)
+    print("PASS: fresh pilot-model and SBA tables match submitted research tables.")
 
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--out",type=Path,default=Path("results"))
-    verify(parser.parse_args().out)
+    parser.add_argument("--pilot-reference", type=Path, help="compare regenerated theory and SBA tables with a release")
+    args = parser.parse_args()
+    verify(args.out)
+    if args.pilot_reference is not None:
+        compare_pilot_tables(args.out, args.pilot_reference)

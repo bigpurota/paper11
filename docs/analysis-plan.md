@@ -10,3 +10,7 @@ Team 12 • DSBA Research Seminar • Round 3 • assigned arXiv:2407.13009v1, m
 * Perturb prior odds by factors 0.5 and 2, hold the evaluated scorecard fixed. Compare to logged IPW and hard pseudo-labeling, including calibration and effective sample size. Add a controlled simulation with known labels, a random-selection placebo and independent seeds.
 * Paired test-set bootstrap for BASL and policy effects; condition on fitted models, respect folds, show intervals and a minimum detectable effect scale. Secondary diagnostics are exploratory; do not choose models or claims from a grid of test p-values.
 * The original Monedo randomized approval labels are unavailable to this project. Transcribe reference estimates from Tables 2/3 and Section 7, never fill gaps in the paper with artificial author results.
+
+## Follow-up on the value of an individual repayment
+
+The prior three-application exercise motivated a subsequent one-pilot experiment. The theory specifies timing, dependence and the degree of later adaptation. The SBA extension uses another funded-loan archive to replay a dated one-pilot rule, a forced pilot and the same no-pilot decision with refreshed common information. Study choices and secondary specifications are described with the corresponding results. This extension is exploratory. [Theory and grid](information-value.md) · [Chronological SBA design](pilot-replay.md)

@@ -1,6 +1,6 @@
 # Paper 11 presentation
 
-Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–26 are for questions.
+Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has editable tables and timed speaker notes. The talk takes 15 minutes across 14 slides. Slides 15–28 are for questions.
 
 ## Fifteen-minute speaking plan
 
@@ -29,6 +29,8 @@ Open [the PDF](paper11.pdf) for projection. The [PowerPoint](paper11.pptx) has e
 | 24 | Scenario margins from the validation-selected loan cutoff |
 | 25 | Worst-case regret for five fixed or randomized approval cutoffs |
 | 26 | Expected audit size for the Prosper expansion and two break-even cases |
+| 27 | Can one recorded SBA repayment improve the next regional lending decision? |
+| 28 | Break-even horizons with one label versus repeated learning and the parameter grid |
 
 ## Updating the deck
 
@@ -38,4 +40,4 @@ From the repository root, run the analytical pipeline first, then run `python3 s
 
 Slide 12 uses the two-cutoff rows marked `oracle_decile_totals` in [witness worlds](../results/identification_worlds.csv) and [policy summaries](../results/identification_summary.csv). The group counts are disclosed retrospectively. Slide 26 takes the three Prosper sample-size expectations from [decision audit results](../results/decision_audit_summary.csv). Slide 25 uses the five-cutoff, unrestricted rows in the policy summaries.
 
-Slide 10 uses an illustrative four-band example and checks the aggregate counts in [policy information](../results/policy_information_summary.csv). Slide 14 scales the [dynamic lending model](../results/exploration_values.csv) to loans of 100 units of principal. The hidden risk regime is shared in the displayed scenario.
+Slide 10 uses an illustrative four-band example and checks the aggregate counts in [policy information](../results/policy_information_summary.csv). Slide 14 scales the [one-pilot frontier](../results/information_value_frontier.csv) to principal 100. Slide 27 uses the chronological, early-national terms in the [SBA replay](../results/pilot_replay_summary.csv). Slide 28 compares the one-pilot rule with [repeated learning](../results/exploration_values.csv) and reports [parameter-grid counts](../results/information_value_stress.csv).

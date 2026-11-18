@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from paper11.audit_design import randomized_audit
-from paper11.data import PERIODS, Population, checksum
+from paper11.data import PERIODS, Population
 from paper11.empirical import cashflow, odds_shift, risk_lift, run_fold, select_policy
 
 

@@ -6,6 +6,7 @@ import re
 import shutil
 import statistics
 import subprocess
+import sys
 import tempfile
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
@@ -16,6 +17,10 @@ from defense import assemble
 HERE = Path(__file__).resolve().parent
 RESULTS = HERE.parent / "results"
 SOURCES = {"simulation_fig2.png", "calibration.png", "vintage_forecasts.png", "bounds_frontier.png"}
+# Drawn here from the aggregate results at the size of their frames in the talk template.
+TALK_FIGURES = {"talk_pilot.png", "talk_dutch.png"}
+INK, MUTED, GRID, AXIS = "#0E2D69", "#52514e", "#e1e0d9", "#c3c2b7"
+BLUE, ORANGE, AQUA, GRAY = "#2a78d6", "#eb6834", "#1baf7a", "#8d8b85"
 TOKEN = re.compile(rb"\{\{([a-z0-9_]+)\}\}")
 NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
@@ -331,6 +336,7 @@ def result_fields():
     fields.update(early_payment_fields())
     fields["talk_iv_loss"] = f"{float(fields['iv_loss']):.2f}"
     fields["talk_iv_per"] = f"{float(fields['iv_per']):.2f}"
+    fields["talk_iv_cap"] = f"{float(fields['iv_cap']):.2f}"
     for key, dataset in [("orig", "monedo"), ("tw", "taiwan"), ("pr", "prosper")]:
         for label, method in [("a", "accepts"), ("i", "ipw"), ("b", "bayes")]:
             fields[f"{key}_eval_{label}"] = number(one(comparison, table=2, method=method, metric="abr")[dataset])
@@ -419,6 +425,90 @@ def result_fields():
     return fields
 
 
+def talk_figures(directory):
+    """Draw the pilot break-even and Dutch forecast charts; return their paths by alt text."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    sys.path.insert(0, str(HERE.parent / "src"))
+    from paper11.exploration import Model
+    from paper11.information_value import Pilot, pilot_value
+
+    from matplotlib import font_manager
+    installed = {font.name for font in font_manager.fontManager.ttflist}
+    family = next(name for name in ("Arial", "Liberation Sans", "DejaVu Sans") if name in installed)
+    plt.rcParams.update({"font.family": family, "font.size": 13,
+                         "text.color": INK, "axes.labelcolor": MUTED, "xtick.color": MUTED,
+                         "ytick.color": MUTED, "axes.edgecolor": AXIS, "legend.frameon": False})
+
+    def frame(ax):
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="y", color=GRID, lw=0.8)
+        ax.set_axisbelow(True)
+        ax.tick_params(length=0, pad=6)
+
+    paths = {name: Path(directory) / name for name in TALK_FIGURES}
+
+    pilot = Pilot.from_model(Model())
+    later = list(range(7))
+    loss = -100 * pilot.prior_margin
+    fig, ax = plt.subplots(figsize=(4.3, 3.8), dpi=200, layout="constrained")
+    ax.axhline(loss, color=MUTED, lw=1.2)
+    ax.text(later[-1], loss - 0.08, f"Pilot’s expected loss {loss:.2f}", color=MUTED, fontsize=11.5,
+            ha="right", va="top")
+    for reset, color, marker, name, dy in [(0., BLUE, "o", "Risk persists", 8),
+                                           (.1, ORANGE, "s", "Risk resets 10% per loan", -18)]:
+        value = [100 * pilot_value(pilot, n, reset=reset) for n in later]
+        ax.plot(later, value, color=color, lw=2, marker=marker, ms=6.5, mec="white", mew=1, label=name)
+        ax.annotate(name, (later[-1], value[-1]), xytext=(0, dy), textcoords="offset points",
+                    ha="right", color=INK, fontsize=11.5)
+    first = next(n for n in later if 100 * pilot_value(pilot, n) > loss)
+    ax.annotate(f"pays back after\n{first} later loans", (first, 100 * pilot_value(pilot, first)), xytext=(0.15, 2.2),
+                ha="left", va="bottom", color=INK, fontsize=11.5, fontweight="bold",
+                arrowprops=dict(arrowstyle="-|>", color=INK, lw=1, shrinkB=6))
+    ax.set(xticks=later, ylim=(0, 3.6), xlabel="Later loans that can use the outcome",
+           ylabel="Expected gain from the outcome")
+    ax.legend(loc="upper left", fontsize=11, handlelength=1.6, borderaxespad=0.1)
+    frame(ax)
+    fig.savefig(paths["talk_pilot.png"], facecolor="white")
+    plt.close(fig)
+
+    rows = read_table("early_dutch_episodes")
+    x = list(range(len(rows)))
+    ticks = []
+    for r in rows:
+        year, month = r["origin_month"].split("-")
+        name = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][int(month)-1]
+        ticks.append(name + ("\n" + year if r is rows[0] or month == "01" else ""))
+    series = lambda key: [100 * float(r[key]) for r in rows]
+    fig, ax = plt.subplots(figsize=(7.6, 4.1), dpi=200, layout="constrained")
+    for key, name in [("local", "Dutch history"), ("broader", "Other countries")]:
+        y = series(key)
+        ax.plot(x, y, color=GRAY, lw=2)
+        ax.text(x[-1] + 0.15, y[-1], name, va="center", color=MUTED, fontsize=12.5)
+    ax.plot(x, series("revised_young_year_rate"), color=AQUA, lw=2, marker="s", ms=6.5, mec="white", mew=1)
+    ax.plot(x, series("six_month"), color=BLUE, lw=2.2, marker="o", ms=7, mec="white", mew=1)
+    ax.plot(x, series("target"), ls="none", color=ORANGE, marker="D", ms=7.5, mec="white", mew=1, clip_on=False,
+            zorder=4)
+    handles = [Line2D([], [], color=GRAY, lw=2, label="Mature histories"),
+               Line2D([], [], color=BLUE, lw=2.2, marker="o", mec="white", label="Six-month forecast"),
+               Line2D([], [], color=AQUA, lw=2, marker="s", mec="white", label="Young loans, own year-one rate"),
+               Line2D([], [], ls="none", color=ORANGE, marker="D", mec="white", label="Next 25 loans, realized")]
+    ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(0, 1.0), ncols=2, fontsize=12.5,
+              handlelength=2, columnspacing=1.6, borderaxespad=0.2)
+    ax.set_xticks(x, ticks)
+    ax.set_xlim(-0.3, x[-1] + 1.9)
+    ax.set_ylim(0, 32)
+    ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
+    ax.set_ylabel("Default risk")
+    ax.set_xlabel("Forecast date")
+    frame(ax)
+    fig.savefig(paths["talk_dutch.png"], facecolor="white")
+    plt.close(fig)
+    return paths
+
+
 def image_paths(template, required):
     """Match a figure's slide alt text to its embedded media target."""
     assets = {}
@@ -428,7 +518,7 @@ def image_paths(template, required):
         xml = ET.fromstring(template.read(slide))
         for pic in xml.findall(".//p:pic", NS):
             label = pic.find("p:nvPicPr/p:cNvPr", NS).get("descr")
-            if label not in SOURCES:
+            if label not in required:
                 continue
             relid = pic.find("p:blipFill/a:blip", NS).get("{" + NS["r"] + "}embed")
             directory, name = posixpath.split(slide)
@@ -442,15 +532,16 @@ def image_paths(template, required):
 
 
 def refresh_pptx(target, fields, template, figures):
+    """figures maps each bound alt text to the image file that replaces it."""
     def substitute(match):
         return escape(fields[match.group(1).decode()]).encode("utf-8")
 
     with ZipFile(template) as src, ZipFile(target, "w") as out:
-        assets = image_paths(src, figures)
+        assets = image_paths(src, set(figures))
         for item in src.infolist():
             payload = src.read(item)
             if item.filename in assets:
-                payload = (RESULTS / assets[item.filename]).read_bytes()
+                payload = Path(figures[assets[item.filename]]).read_bytes()
             elif re.fullmatch(r"ppt/(slides/slide|notesSlides/notesSlide)\d+\.xml", item.filename):
                 payload = TOKEN.sub(substitute, payload)
                 if b"{{" in payload or b"}}" in payload:
@@ -467,8 +558,10 @@ def main():
         tmp = Path(work)
         fields = result_fields()
         talk, evidence, defense = tmp / "talk.pptx", tmp / "evidence.pptx", tmp / "paper11.pptx"
-        refresh_pptx(talk, fields, HERE / "talk-template.pptx", {"simulation_fig2.png"})
-        refresh_pptx(evidence, fields, HERE / "template.pptx", SOURCES)
+        drawn = talk_figures(tmp)
+        refresh_pptx(talk, fields, HERE / "talk-template.pptx",
+                     {"simulation_fig2.png": RESULTS / "simulation_fig2.png", **drawn})
+        refresh_pptx(evidence, fields, HERE / "template.pptx", {name: RESULTS / name for name in SOURCES})
         assemble(talk, evidence, defense, fields)
         subprocess.run([office, f"-env:UserInstallation={Path(profile).as_uri()}", "--headless",
                         "--convert-to", "pdf", "--outdir", str(tmp), str(talk), str(evidence), str(defense)], check=True)

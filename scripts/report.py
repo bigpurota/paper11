@@ -53,11 +53,43 @@ def calibration_plot(out):
     plt.close(fig)
 
 
+# Reader-facing names for result columns and coded values; anything unlisted is shown as stored.
+NAMES = {
+    "statistic": "Statistic", "paper_value": "Paper", "estimate": "Estimate", "ci_low": "95% low",
+    "ci_high": "95% high", "table": "Paper table", "method": "Method", "monedo": "Monedo (paper)",
+    "taiwan": "Taiwan", "prosper": "Prosper", "dataset": "Data", "auc": "AUC", "brier": "Brier",
+    "pauc": "pAUC", "abr": "ABR", "lift10": "Top-decile lift", "contrast": "Contrast", "lgd": "LGD",
+    "accepts": "Accepted-only", "bayes": "Bayesian", "ipw": "Reweighting", "basl": "BASL",
+    "basl_guarded": "BASL, baseline eligible", "hard_cutoff": "Hard cutoff", "logit": "Logit",
+    "oracle_history": "Complete history", "bayes_odds_double": "Bayesian, reject odds ×2",
+    "bayes_odds_half": "Bayesian, reject odds ×½", "bayes_minus_accepts": "Bayesian − accepted-only",
+    "accept_eval_rmse": "Accepted-only evaluation error (RMSE)", "bayes_eval_rmse": "Bayesian evaluation error (RMSE)",
+    "oracle_gap": "ABR gap, accepted-only vs full-label training", "basl_recovery_fraction": "Share of that gap BASL recovers",
+    "basl_minus_accepts_abr": "BASL − accepted-only: ABR", "basl_minus_accepts_brier": "BASL − accepted-only: Brier",
+    "bayes_minus_accepts_profit_at_lgd50": "Bayesian − accepted-only: margin at 50% LGD",
+    "bayes_minus_accepts_rmse_abr": "Bayesian − accepted-only: ABR estimation error",
+    "n_audited": "Labels audited", "design": "Design", "audit_rmse": "Audit RMSE", "prior_only_rmse": "Prior-only RMSE",
+    "all_rejects": "All past rejects", "policy_rejects": "Rejects the policy would fund",
+    "expansion_bands": "Four bands between cutoffs", "prior_deciles": "Ten prior-risk deciles",
+    "n_policy_pairs": "Policy pairs", "pairs_exact_at_actual_binary_totals": "Differences identified exactly",
+    "decisions_settled_at_actual_binary_totals": "Decisions settled", "quarters": "Quarters",
+    "masking_rmse": "Historical RMSE, pp", "forecast_rmse": "Next-quarter RMSE, pp",
+    "quarters_better_than_accepts": "Quarters better than accepted-only",
+}
+
+
 def table(frame):
     def fmt(v):
-        return f"{v:.4f}" if isinstance(v,(float,np.floating)) else str(v)
-    return "\n".join(["| "+" | ".join(frame.columns)+" |","|"+"---|"*len(frame.columns),
+        if isinstance(v, (float, np.floating)):
+            return f"{v:.4f}"
+        return NAMES.get(v, str(v)) if isinstance(v, str) else str(v)
+    return "\n".join(["| "+" | ".join(NAMES.get(c, str(c)) for c in frame.columns)+" |","|"+"---|"*len(frame.columns),
                        *["| "+" | ".join(map(fmt,row))+" |" for row in frame.itertuples(index=False,name=None)]])
+
+
+def euro(value):
+    """Signed euro amount with the minus sign before the currency symbol."""
+    return ("−" if value < 0 else "") + f"€{abs(value):,.2f}"
 
 
 def pilot_cash_plot(out):
@@ -291,7 +323,7 @@ def signal_sections(out):
         table(comparison),
         "In March 2021 the previous rule put a 1.20% chance on a changed decision for a nonempty portfolio. The later ordinary risk update brought the portfolio close to break-even. The pilot default then moved risk from 16.47% to 20.45%. In the alternative where both lenders could also see the other 473 loans from that month, the same default moved risk from 7.36% to 7.55% and both would lend. The ledger records funded loans. The extra cash in the table results from replaying the earlier information assumption. [Finnish case reconstruction](../docs/finnish-pilot-cases.md)",
         f"A frozen boosting model priced the two possible observations at issue, then predicted the same future portfolio with its actual pilot outcome hidden and revealed. It learned from 232 earlier country–months. Among {c.scored} later nonempty portfolios, the ordinary update improved its Brier score by {primary.loc['brier_public_refresh','mean']:.5f} and adding other loans from the same cohort improved it by {primary.loc['brier_peer_feed','mean']:.5f}. The simple historical-risk forecast scored {primary.loc['brier_initial','mean']:.5f}, ahead of the boosting model with peers ({primary.loc['brier_peers','mean']:.5f}).",
-        f"Revealing just the pilot changed Brier by {gain['mean']:+.6f} in the direction of improvement (95% block interval {gain.low:+.6f} to {gain.high:+.6f}). Of {c.eligible} initially loss-making opportunities, the model chose {c.new_selected}. The earlier selector chose {c.old_selected} and its direct ledger cash summed to €{primary.loc['old_cash','mean'] * c.eligible:,.2f}. Neither selector captured a strict recovery. Only eight eligible cases had a nonempty continuation, all Dutch. The archive measures gross cash to its cutoff.",
+        f"Revealing just the pilot changed Brier by {gain['mean']:+.6f} in the direction of improvement (95% block interval {gain.low:+.6f} to {gain.high:+.6f}). Of {c.eligible} initially loss-making opportunities, the model chose {c.new_selected}. The earlier selector chose {c.old_selected} and its direct ledger cash summed to {euro(primary.loc['old_cash','mean'] * c.eligible)}. Neither selector captured a strict recovery. Only eight eligible cases had a nonempty continuation, all Dutch. The archive measures gross cash to its cutoff.",
         "![Forecast error by information set and the extra value of a single pilot](pilot_signal_ml.png)",
         "[Frozen design](../docs/pilot-signal-ml-protocol.md) · [Coverage and timing](../docs/pilot-signal-panel.md) · [Model and interpretation](../docs/pilot-signal-ml.md) · [All ablations, cash and intervals](pilot_signal_ml_metrics.csv)",
     ]
@@ -363,8 +395,8 @@ def frozen_rule_sections(out):
     return ["### Did a cheaper pilot and an exposure-aware forecast transfer?",
             "Both Estonian successes had €530 principal on a 36-month contract and five prior loans. July's €530 pilot left the follow-up action unchanged. The revised rule values the next up to 25 loans at an exposure estimated before origination. It also allows the bank's ordinary risk estimate to change while waiting. The expected cash gain sets the funding decision. A separate score ranks the chance that a change of action will cover a direct pilot loss.",
             table(pd.DataFrame(rows)),
-            f"The two development cases were already known. The new rule selected {dev.selected} pilots, retained the unsuccessful February switch and added €{dev.new_minus_baseline_cash:.2f} per eligible opportunity over the old rule (95% block interval €{dev.new_minus_baseline_cash_low:.2f} to €{dev.new_minus_baseline_cash_high:.2f}). Doubling the effective strength of historical information or sharing the other matured same-month loans removed all three original switches.",
-            f"The primary holdout had {cells.loc['primary', 'window_issued']:,} funded loans and no comparable grade histories. In the more seasoned window the revised rule earned €{test.new_cash:.2f} per eligible opportunity (95% block interval €{test.new_cash_low:.2f} to €{test.new_cash_high:.2f}). Every euro came from the pilot loans themselves. The missed Finnish pilot lost €386.82; its replayed refusal of 25 follow-ups would have yielded €3,716.92 net on cash recorded in the November 2026 release. Later collections can change that number.",
+            f"The two development cases were already known. The new rule selected {dev.selected} pilots, retained the unsuccessful February switch and added {euro(dev.new_minus_baseline_cash)} per eligible opportunity over the old rule (95% block interval {euro(dev.new_minus_baseline_cash_low)} to {euro(dev.new_minus_baseline_cash_high)}). Doubling the effective strength of historical information or sharing the other matured same-month loans removed all three original switches.",
+            f"The primary holdout had {cells.loc['primary', 'window_issued']:,} funded loans and no comparable grade histories. In the more seasoned window the revised rule earned {euro(test.new_cash)} per eligible opportunity (95% block interval {euro(test.new_cash_low)} to {euro(test.new_cash_high)}). Every euro came from the pilot loans themselves. The missed Finnish pilot lost €386.82; its replayed refusal of 25 follow-ups would have yielded €3,716.92 net on cash recorded in the November 2026 release. Later collections can change that number.",
             f"The strict-recovery score had AUC {test.auc_cash:.3f} (95% interval {test.auc_cash_low:.3f} to {test.auc_cash_high:.3f} on {test.auc_cash_draws:,} estimable draws of 2,500). This clears the prespecified numerical ranking criterion. There was one positive example. Its Finnish score beat seven of 15 comparable negatives (within-segment AUC {test.cash_segment_auc:.3f}). Average precision was {test.ap_cash:.3f} versus a prevalence of {test.cash_prevalence:.3f}. No rule that issued a pilot on these dates captured the strict event.",
             f"The same decision rule selected {us.selected} of {us.eligible} opportunities at US lender Prosper. The archive supplied no strict recoveries among those eligible opportunities and thus no estimable AUC. The two US policies tied at the archived cash cutoff. This supplementary cross-lender test was locked after the Bondora results and before computing the Prosper pilot contrasts.",
             "![Historical contract size and the later ranking of all eligible candidates](pilot_forecast_validation.png)",
@@ -482,6 +514,55 @@ def extension_sections(out):
     ]
 
 
+def summary_section(out, sims, comp, contrast):
+    """Headline results, recomputed from the same tables as the sections below."""
+    sim = sims[sims.metric == "abr"].set_index("statistic")
+    pp = lambda v: f"{100 * v:.2f}"
+    ci = contrast.set_index(["dataset", "contrast"])
+    t2 = comp[(comp.table == 2) & (comp.metric == "abr")].set_index("method")
+    t3 = comp[(comp.table == 3) & (comp.metric == "abr")].set_index("method")
+    info = pd.read_csv(out / "policy_information_summary.csv").groupby("design").sum(numeric_only=True)
+    frontier = pd.read_csv(out / "information_value_frontier.csv")
+    base = frontier[(frontier.discount == 1) & (frontier.delay == 1) & (frontier.fee == 0)].set_index("reset")
+    dutch = pd.read_csv(out / "early_dutch_episodes.csv")
+    czech = pd.read_csv(out / "early_czech_metrics.csv").set_index("method")
+    switch = pd.read_csv(out / "early_czech_policy.csv").query("method == 'six' and reference == 'local' and good == 0.1")
+    rec = sim.loc["basl_recovery_fraction"]
+
+    def interval(dataset, name):
+        row = ci.loc[(dataset, name)]
+        signed = lambda v: f"{100 * v:+.2f}".replace("-", "−")
+        return f"{signed(row.estimate)} pp [{signed(row.ci_low)}, {signed(row.ci_high)}]"
+
+    return [
+        "## Summary",
+        f"- **Simulation.** Bayesian evaluation cuts the error in estimating ABR from {pp(sim.loc['accept_eval_rmse','estimate'])} "
+        f"to {pp(sim.loc['bayes_eval_rmse','estimate'])} pp (paper: {pp(sim.loc['accept_eval_rmse','paper_value'])} to "
+        f"{pp(sim.loc['bayes_eval_rmse','paper_value'])}). BASL recovers {rec.estimate:.1%} of the gap to full-label training "
+        f"(95% interval {rec.ci_low:.1%} to {rec.ci_high:.1%}; paper {rec.paper_value:.1%}).",
+        f"- **Public cohorts.** Bayesian evaluation lowers the ABR estimation error on Taiwan ({pp(t2.loc['accepts','taiwan'])} → "
+        f"{pp(t2.loc['bayes','taiwan'])} pp) and Prosper ({pp(t2.loc['accepts','prosper'])} → {pp(t2.loc['bayes','prosper'])} pp), "
+        f"but the paired changes, {interval('taiwan','bayes_minus_accepts_rmse_abr')} and {interval('prosper','bayes_minus_accepts_rmse_abr')}, "
+        f"include zero. BASL changes ABR by {interval('taiwan','basl_minus_accepts_abr')} on Taiwan and "
+        f"{interval('prosper','basl_minus_accepts_abr')} on Prosper. At 50% LGD every evaluator picks the same cutoff, "
+        "so the paper's profit gain does not appear here.",
+        f"- **Which outcomes decide a policy.** Totals for the four bands between five cutoffs identify "
+        f"{int(info.loc['expansion_bands','pairs_exact_at_actual_binary_totals'])} of {int(info.loc['expansion_bands','n_policy_pairs'])} "
+        f"pairwise differences; totals for ten prior-risk deciles identify {int(info.loc['prior_deciles','pairs_exact_at_actual_binary_totals'])}.",
+        f"- **Lending to learn.** In the illustrative model a pilot of principal 100 loses {-100 * base.loc[0, 'prior_margin']:.2f}; "
+        f"with persistent risk its outcome pays back after {int(base.loc[0, 'first_followups'])} later loans, and with a 10% "
+        f"chance of a reset per loan the total value is capped at {100 * base.loc[0.1, 'evsi_limit']:.2f}. In later Bondora "
+        "loans the frozen selector missed the only recovery.",
+        f"- **Early defaults.** On eight Dutch dates the six-month forecast averaged {dutch.six_month.mean():.2%} against "
+        f"{dutch.target.mean():.2%} realized and histories of {dutch.local.mean():.2%} and {dutch.broader.mean():.2%}. At a "
+        f"Czech bank the fixed rule changed {int(switch.extra_books.iloc[0] + switch.dropped_books.iloc[0])} of "
+        f"{int(switch.books.iloc[0])} book decisions, but the other-region rate kept the lowest Brier loss "
+        f"({czech.loc['other','brier']:.4f} versus {czech.loc['six','brier']:.4f}).",
+        "Outcomes on Taiwan and Prosper come from funded loans with simulated selection; the Monedo randomized holdout "
+        "is private. Extension samples are small, and the sections below give each design and its uncertainty.",
+    ]
+
+
 def write_report(out, comp):
     sims = pd.read_csv(out/"simulation_comparison.csv")
     train = pd.read_csv(out/"training.csv").groupby(["dataset","method"],as_index=False)[["auc","brier","pauc","abr","lift10"]].mean()
@@ -508,6 +589,7 @@ def write_report(out, comp):
         "# Team 12 · Fighting Sampling Bias",
         "Team 12 · Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.",
         "This report uses the assigned preprint and public borrower records. An approval scorecard is needed for everyone who applies, while repayment is usually observed only for the people actually financed. Training with inferred labels and evaluating on the complete applicant mix solve different problems.",
+        *summary_section(out, sims, comp, contrast),
         "## Synthetic replication of Figure 2",
         table(gap[["statistic","paper_value","estimate","ci_low","ci_high"]]),
         "Twenty independent runs, 40 batches each. Intervals resample complete simulation seeds. Recovery is a fraction of the gap between accepted-only and full-label training. Evaluation error is measured against true holdout labels. The first four shared plotted checkpoints are displayed on identical axes. The published long-run summaries cover a longer experiment.",

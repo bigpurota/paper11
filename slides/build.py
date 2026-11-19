@@ -421,6 +421,13 @@ def result_fields():
     audited = [int(r["audited"]) for r in read_table("selection_strength_folds")
                if r["dataset"] == "taiwan" and r["strength"] == "hard"]
     fields["st_audit_n"] = f"{min(audited)}–{max(audited)}"
+    # These two independently archived refits stay fixed when results/ is regenerated.
+    with (HERE.parent / "docs/refits/taiwan-hard-cutoff.csv").open(newline="") as archive:
+        refits = list(csv.DictReader(archive))
+    for label, platform in (("mac", "macos-arm64"), ("linux", "linux-x86_64")):
+        run = one(refits, platform=platform)
+        fields[f"{label}_b"] = signed(run["B_minus_A"]).replace("-", "−")
+        fields[f"{label}_bp"] = signed(run["Bplus_minus_Aplus"]).replace("-", "−")
     # Same-cohort ABR estimation error: the selection correction without any population transfer.
     within = matching(read_table("evaluation"), metric="abr")
     for key, dataset in [("tw", "taiwan"), ("pr", "prosper")]:

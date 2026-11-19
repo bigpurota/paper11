@@ -4,6 +4,8 @@ Bayesian evaluation uses a model to fill in missing repayment outcomes. BASL use
 
 ## Taiwan
 
+The grid and hypothesis assessments below use the macOS reference fits. The [Linux refit](platform-refit.md) shows which conclusions also hold in a second software environment.
+
 Selection strength $s$ is the slope in $\mathrm{expit}(s(\text{index}-c_s))$. Its intercept targets the main design’s realized acceptance share in expectation. In Taiwan the finite-slope draws accepted 63.35–63.61%. The hard cutoff kept tied applicants together and accepted 67.27%. The original soft rule, reported as `main` in the CSV, accepted 63.73% and had a 5% floor and 95% ceiling. Running that separate reference reproduces the original baseline point estimates. Errors below are root mean squared errors across four folds, in percentage points. Test ABR averages the default rate over approval shares from 20% to 40%.
 
 | | s = 0.5 | 1 | 2 | 4 | hard |

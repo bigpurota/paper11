@@ -1009,7 +1009,7 @@ def verify(out):
     print("PASS: locked cash contrasts, profile history, cross-lender signals, transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
-def compare_pilot_tables(out, reference):
+def compare_pilot_tables(out, reference, selection_reference=None):
     for family in ("information_value", "pilot_replay", "pilot_transfer", "lender_pilot", "pilot_targeting",
                    "pilot_profiles", "pilot_signal", "pilot_rule", "pilot_holdout", "pilot_prosper", "finnish_pilot", "frequency", "dutch_frequency", "local_trust_bank", "early_dutch", "early_czech"):
         actual = {p.name for p in out.glob(f"{family}_*.csv")}
@@ -1019,18 +1019,23 @@ def compare_pilot_tables(out, reference):
         for name in sorted(expected):
             pd.testing.assert_frame_equal(pd.read_csv(out / name), pd.read_csv(reference / name),
                                           check_exact=False, rtol=1e-8, atol=1e-10, obj=name)
-    for name in ("dutch_trust.csv", "hard_selection.csv", "hard_selection_training.csv",
-                 "selection_strength.csv", "selection_strength_folds.csv"):
-        pd.testing.assert_frame_equal(pd.read_csv(out / name), pd.read_csv(reference / name),
+    pd.testing.assert_frame_equal(pd.read_csv(out / "dutch_trust.csv"), pd.read_csv(reference / "dutch_trust.csv"),
+                                  check_exact=False, rtol=1e-8, atol=1e-10)
+    selection_reference = reference if selection_reference is None else selection_reference
+    for name in ("hard_selection.csv", "hard_selection_training.csv", "selection_strength.csv", "selection_strength_folds.csv", "policy.csv"):
+        pd.testing.assert_frame_equal(pd.read_csv(out / name), pd.read_csv(selection_reference / name),
                                       check_exact=False, rtol=1e-7, atol=1e-9, obj=name)
-    print("PASS: regenerated pilot and selection tables match the release.")
+    print(f"PASS: regenerated pilot tables match the release; selection refits match {selection_reference}.")
 
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--out",type=Path,default=Path("results"))
     parser.add_argument("--pilot-reference", type=Path, help="compare regenerated pilot and selection tables with a release")
+    parser.add_argument("--selection-reference", type=Path, help="platform-specific reference for selection and lending-policy tables; defaults to --pilot-reference")
     args = parser.parse_args()
+    if args.selection_reference is not None and args.pilot_reference is None:
+        parser.error("--selection-reference requires --pilot-reference")
     verify(args.out)
     if args.pilot_reference is not None:
-        compare_pilot_tables(args.out, args.pilot_reference)
+        compare_pilot_tables(args.out, args.pilot_reference, args.selection_reference)

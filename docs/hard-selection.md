@@ -12,6 +12,8 @@ The main public-cohort design accepts each applicant with probability $0.05+0.90
 
 ## Results
 
+The table reports the macOS reference fit. A [second fit on Linux](platform-refit.md) gives the same Taiwan policy profile and a smaller increase in test ABR from BASL.
+
 | Data | Historical policy | Accepted | Bad rate, accepted / rejected | ABR estimation error, pp (accepted-only → Bayesian) | Test ABR (accepted-only → BASL) |
 |---|---|---|---|---|---|
 | Taiwan | soft | 63.7% | 17.4% / 30.4% | 1.43 → 1.35 | 7.20% → 7.37% |

@@ -536,6 +536,9 @@ def hard_selection_section(out):
     def diag(quantity):
         return h[(h.dataset == "taiwan") & (h.design == "hard") & (h.quantity == quantity)].estimate.iloc[0]
 
+    hard_folds = pd.read_csv(out / "hard_selection_training.csv").query("dataset == 'taiwan'").pivot(
+        index="fold", columns="method", values="abr")
+    raised_defaults = (hard_folds.basl > hard_folds.accepts).sum()
     frame = pd.DataFrame(rows, columns=["Data", "Historical policy", "Accepted", "Bad rate, accepted / rejected",
                                         "ABR estimation error, pp (accepted-only → Bayesian)",
                                         "Test ABR (accepted-only → BASL)"])
@@ -547,8 +550,8 @@ def hard_selection_section(out):
         "Historical rejects then never resemble accepts on the index, as under a scorecard cutoff.",
         table(frame),
         "Stronger selection makes accepted-only evaluation worse and Bayesian evaluation helps more; on Taiwan the paired "
-        "interval now excludes zero. BASL becomes worse on Taiwan in every fold, though by very different amounts; the "
-        "borrower-bootstrap intervals hold the fitted models fixed and understate that variation. On the hard-cutoff validation rejects the "
+        f"interval now excludes zero. BASL raises approved defaults in {raised_defaults} of {len(hard_folds)} Taiwan folds. The "
+        "borrower-bootstrap intervals hold the fitted models fixed and omit variation across refits. On the hard-cutoff validation rejects the "
         f"accepts-trained logistic prior averages {100 * diag('reject_prior_mean'):.1f}% against an actual "
         f"{100 * diag('reject_bad_rate_validation'):.1f}% and ranks them with AUC {diag('reject_prior_auc'):.2f}. "
         "This measures the evaluation prior. BASL fits a separate labeler in each round, so the prior's AUC alone "
@@ -580,9 +583,9 @@ def strength_bullet(out):
         f"at s = 1 and {v('hard', 'logistic_reject_auc'):.2f} under a hard cutoff, where BASL raises the default rate by "
         f"{signed(v('hard', 'B_minus_A'))} pp (folds {signed(v('hard', 'B_minus_A', 'fold_min'))} to "
         f"{signed(v('hard', 'B_minus_A', 'fold_max'))}). A random 5% audit of training rejects lifts that AUC to "
-        f"{v('hard', 'audited_reject_auc'):.2f} and reduces the BASL gap to {ci('hard', 'Bplus_minus_Aplus')}. Adding "
-        f"audited outcomes to ordinary supervised training changes the approved default rate by {ci('hard', 'Aplus_minus_A')}. H2, H4 and H5b "
-        "missed their prespecified criteria.",
+        f"{v('hard', 'audited_reject_auc'):.2f} and the audited BASL gap is {ci('hard', 'Bplus_minus_Aplus')}. Adding "
+        f"audited outcomes to ordinary supervised training changes the approved default rate by {ci('hard', 'Aplus_minus_A')}. "
+        "[Comparison with the independent Linux refit](../docs/platform-refit.md).",
     ]
 
 

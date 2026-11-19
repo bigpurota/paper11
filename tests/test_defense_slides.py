@@ -1,4 +1,5 @@
 """Check navigation in the packaged PowerPoint, independently of the slide builder."""
+import csv
 from pathlib import Path, PurePosixPath
 from posixpath import join, normpath
 from xml.etree import ElementTree as ET
@@ -47,3 +48,17 @@ def test_all_backup_slides_reachable_from_the_menu_and_back():
         assert set(ordered[TALK + 1:]).issubset(destinations(menu))
         for backup in ordered[TALK + 1:]:
             assert menu in destinations(backup), backup
+
+
+def test_defense_shows_both_archived_platform_refits():
+    archive = DECK.parents[1] / "docs" / "refits" / "taiwan-hard-cutoff.csv"
+    with archive.open(newline="") as stream:
+        refits = {row["platform"]: row for row in csv.DictReader(stream)}
+    with ZipFile(DECK) as package:
+        slide = ET.fromstring(package.read("ppt/slides/slide9.xml"))
+    text = " ".join(run.text or "" for run in slide.iter(DRAWING+"t"))
+    for platform, label in (("macos-arm64", "macOS"), ("linux-x86_64", "Linux")):
+        row = refits[platform]
+        estimates = [f"{100 * float(row[key]):+.2f}".replace("-", "−")
+                     for key in ("B_minus_A", "Bplus_minus_Aplus")]
+        assert f"{label} {estimates[0]} / {estimates[1]}" in text

@@ -693,8 +693,9 @@ def main():
         assemble(full_talk, evidence, defense, fields)
         subprocess.run([office, f"-env:UserInstallation={Path(profile).as_uri()}", "--headless",
                         "--convert-to", "pdf", "--outdir", str(tmp), str(talk), str(evidence), str(defense)], check=True)
+        # The README displays the same Taiwan selection chart as slide 8.
         outputs = (defense, defense.with_suffix(".pdf"), talk.with_suffix(".pdf"),
-                   evidence, evidence.with_suffix(".pdf"))
+                   evidence, evidence.with_suffix(".pdf"), drawn["talk_strength.png"])
         if not all(p.is_file() and p.stat().st_size for p in outputs):
             raise RuntimeError("LibreOffice did not produce all presentation PDFs")
         for output in outputs:

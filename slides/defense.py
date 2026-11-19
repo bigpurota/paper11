@@ -11,19 +11,19 @@ PK = "http://schemas.openxmlformats.org/package/2006/relationships"
 CT = "http://schemas.openxmlformats.org/package/2006/content-types"
 AP = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
 NS = {"p": P, "a": A}
-INDEX = 11  # ten talk slides, then the question index
+INDEX = 15  # fourteen talk slides, then the question index
 
 # Short menu label and source page: a number refers to the 38-page evidence book,
 # "talk:n" to a slide of the talk template kept for questions after the summary.
 TOPICS = [
     ("Data and holdout design", 4), ("Paper Table 2 · evaluation error", 6),
     ("Paper Table 3 · four score metrics", 22), ("Calibration and AUC", 18),
-    ("Overfitting and robustness", 13), ("Identical totals, opposite decisions", 12),
+    ("Borrowers between cutoffs", "talk:15"), ("Identical totals, opposite decisions", 12),
     ("How many repayments to audit?", 26), ("Philippine randomized offers", 11),
     ("Pilot break-even horizon", 28), ("An Estonian decision switch", 30),
     ("Pilot selection on later loans", 32), ("The missed Finnish pilot", 33),
     ("Historical frequency vs. boosting", 35), ("Pooling at Wells Fargo", 38),
-    ("Netherlands · early defaults", "talk:11"), ("Czech bank · early arrears", "talk:12"),
+    ("Netherlands · early defaults", "talk:16"), ("Czech bank · early arrears", "talk:17"),
 ]
 
 
@@ -143,8 +143,7 @@ def adapt_notes(notes, page):
     if page < INDEX:
         text = text.replace("see evidence 6–7 and 18 for the paired comparisons, AUC and calibration, or 21 for the alternative stopping rule",
                             f"use pages {topic_page('Paper Table 2 · evaluation error')}–{topic_page('Calibration and AUC')} "
-                            f"for the paper tables, AUC and calibration, or page {topic_page('Overfitting and robustness')} "
-                            "for overfitting")
+                            "for the paper tables, AUC and calibration; overfitting is on slide 11")
     else:
         # The evidence book originally had a second timing plan. Only the first
         # nine pages of this assembled file are part of the spoken presentation.
@@ -182,10 +181,9 @@ def assemble(talk, evidence, output, fields):
                 original = TOPICS[page-INDEX-1][1]
                 n, source = (int(original[5:]), base) if isinstance(original, str) else (original, library)
             slide, srels, notes, nrels = [ET.fromstring(source.read(p)) for p in slide_parts(n)]
-            if page == 5:
-                footer = shapes(slide)["text-64-674"]
-                txt = footer.find(".//a:t", NS)
-                txt.text = txt.text.replace("evidence slide 18", f"page {topic_page('Calibration and AUC')}")
+            if page < INDEX:
+                for node in slide.findall(".//a:t", NS):
+                    node.text = (node.text or "").replace("evidence slide 18", f"page {topic_page('Calibration and AUC')}")
             if page == INDEX:
                 menu(slide, srels)
                 set_text(notes_body(notes), "Use any entry to open that evidence page. Each reserve page links back here.")

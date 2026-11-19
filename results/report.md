@@ -144,7 +144,7 @@ A prespecified study varies the sharpness of simulated historical selection at a
 | Same with the audit | −0.12 | +0.00 | +0.06 | +0.04 | +0.31 |
 | Training on audited outcomes, ABR change, pp | −0.16 | −0.15 | −0.07 | −0.71 | −1.45 |
 
-Accepted labels mislead more as selection sharpens, and Bayesian evaluation helps once selection is moderate. The accepts-trained logistic model ranks rejects backwards under sharp selection; that is when BASL damages the scorecard. A small random audit repairs the reject model, and its outcomes improve the scorecard more than either correction. Prosper moves in the same direction with smaller selection effects. [Protocol](../docs/selection-strength-protocol.md) · [Results and hypotheses](../docs/selection-strength.md) · [All quantities](selection_strength.csv)
+Accepted labels mislead more as selection sharpens, and Bayesian evaluation helps once selection is moderate. The accepts-trained logistic model ranks rejects backwards under sharp selection; that is when BASL damages the scorecard. A small random audit repairs the reject model, and training on its outcomes improves the scorecard where BASL harms it. Prosper moves in the same direction with smaller selection effects. [Protocol](../docs/selection-strength-protocol.md) · [Results and hypotheses](../docs/selection-strength.md) · [All quantities](selection_strength.csv)
 
 ## Can a small randomized audit improve ABR measurement?
 

@@ -425,6 +425,10 @@ def result_fields():
         for label, method in [("a", "accepts"), ("b", "bayes")]:
             errors = [float(r["within_cohort_error"]) for r in matching(within, dataset=dataset, method=method)]
             fields[f"{key}_same_{label}"] = f"{100 * statistics.mean(e * e for e in errors) ** .5:.2f}"
+    for key, dataset in [("tw", "taiwan"), ("pr", "prosper")]:
+        for method in ("logit", "accepts", "basl"):
+            values = [float(r["auc"]) for r in matching(training, dataset=dataset, method=method)]
+            fields[f"auc_{key}_{method}"] = f"{statistics.mean(values):.2f}"
     for label, method in [("a", "accepts"), ("b", "basl")]:
         row = one(training, dataset="prosper", method=method)
         fields[f"pr_auc_{label}"] = f"{float(row['auc']):.3f}"
@@ -673,8 +677,9 @@ def main():
         full_talk = tmp / "talk-with-evidence.pptx"
         drawn = talk_figures(tmp)
         refresh_pptx(full_talk, fields, HERE / "talk-template.pptx",
-                     {"simulation_fig2.png": RESULTS / "simulation_fig2.png", **drawn})
-        rehearsal_copy(full_talk, talk, keep=10)
+                     {"simulation_fig2.png": RESULTS / "simulation_fig2.png",
+                      "calibration.png": RESULTS / "calibration.png", **drawn})
+        rehearsal_copy(full_talk, talk, keep=14)
         refresh_pptx(evidence, fields, HERE / "template.pptx", {name: RESULTS / name for name in SOURCES})
         assemble(full_talk, evidence, defense, fields)
         subprocess.run([office, f"-env:UserInstallation={Path(profile).as_uri()}", "--headless",

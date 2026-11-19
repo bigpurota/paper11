@@ -9,7 +9,7 @@ DECK = Path(__file__).resolve().parents[1] / "slides" / "paper11.pptx"
 OFFICE = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 PRESENTATION = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
 DRAWING = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
-TALK = 10  # spoken slides before the question index
+TALK = 14  # spoken slides before the question index
 
 
 def slide_targets(package, owner):

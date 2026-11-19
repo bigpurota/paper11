@@ -610,8 +610,8 @@ def selection_strength_section(out):
         table(frame),
         "Accepted labels mislead more as selection sharpens, and Bayesian evaluation helps once selection is moderate. "
         "The accepts-trained logistic model ranks rejects backwards under sharp selection; that is when BASL damages the "
-        "scorecard. A small random audit repairs the reject model, and its outcomes improve the scorecard more than either "
-        "correction. Prosper moves in the same direction with smaller selection effects. "
+        "scorecard. A small random audit repairs the reject model, and training on its outcomes improves the scorecard "
+        "where BASL harms it. Prosper moves in the same direction with smaller selection effects. "
         "[Protocol](../docs/selection-strength-protocol.md) · [Results and hypotheses](../docs/selection-strength.md) · "
         "[All quantities](selection_strength.csv)",
     ]

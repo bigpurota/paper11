@@ -52,12 +52,16 @@ def prior_diagnostics(pop):
     for fit, _, val, _ in pop.splits:
         imputer = SimpleImputer(strategy="median", keep_empty_features=True).fit(pop.X[fit])
         X = imputer.transform(pop.X)
-        accepted, rejected = fit[pop.accepted[fit]], val[~pop.accepted[val]]
+        accepted = fit[pop.accepted[fit]]
+        rejected = ~pop.accepted[val]
         model = make_pipeline(StandardScaler(), LogisticRegression(C=1., max_iter=1500))
-        prior = model.fit(X[accepted], pop.y[accepted]).predict_proba(X[rejected])[:, 1]
+        # Score the same whole validation batch as the primary evaluation, then
+        # select rejects. Changing the BLAS batch shape can break numerical ties.
+        prior = model.fit(X[accepted], pop.y[accepted]).predict_proba(X[val])[:, 1][rejected]
+        outcomes = pop.y[val][rejected]
         level.append(prior.mean())
-        actual.append(pop.y[rejected].mean())
-        ranking.append(roc_auc_score(pop.y[rejected], prior))
+        actual.append(outcomes.mean())
+        ranking.append(roc_auc_score(outcomes, prior))
     return dict(reject_prior_mean=np.mean(level), reject_bad_rate_validation=np.mean(actual),
                 reject_prior_auc=np.mean(ranking))
 

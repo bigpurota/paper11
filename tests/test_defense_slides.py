@@ -27,6 +27,9 @@ def slide_targets(package, owner):
 
 def test_all_backup_slides_reachable_from_the_menu_and_back():
     with ZipFile(DECK) as package:
+        manifest = ET.fromstring(package.read("[Content_Types].xml"))
+        overrides = [node.attrib["PartName"] for node in manifest if "PartName" in node.attrib]
+        assert len(overrides) == len(set(overrides))
         presentation = "ppt/presentation.xml"
         targets = slide_targets(package, presentation)
         tree = ET.fromstring(package.read(presentation))

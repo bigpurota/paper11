@@ -10,7 +10,7 @@ This report uses the assigned preprint and public borrower records. An approval 
 
 - **Public cohorts.** Bayesian evaluation lowers the ABR estimation error on Taiwan (1.43 → 1.35 pp) and Prosper (1.35 → 0.35 pp), but the paired changes, −0.08 pp [−0.95, +0.78] and −1.00 pp [−1.33, +0.53], include zero. BASL changes ABR by +0.16 pp [+0.02, +0.30] on Taiwan and +0.01 pp [−0.22, +0.26] on Prosper. At 50% LGD every evaluator picks the same cutoff, so the paper's profit gain does not appear here. On the same Taiwan cohort, with no change of population, Bayesian evaluation is worse (1.79 versus 0.59 pp) because its logistic prior is weak there; on Prosper it improves (1.13 → 0.13 pp).
 
-- **When reject inference works (prespecified).** As historical selection sharpens at a fixed acceptance share, accepted labels misstate a Taiwan scorecard's bad rate by 1.37 to 3.27 pp. Bayesian evaluation helps once selection is moderate (−1.40 pp [−1.69, −0.92] at s = 4) but not when it is very weak. Both corrections rest on a model of the rejects: the accepts-trained logistic model ranks them with AUC 0.77 at s = 1 and 0.41 under a hard cutoff, where BASL raises the default rate by +2.97 pp (folds +0.94 to +7.83). A random 5% audit of training rejects lifts that AUC to 0.71 and cuts BASL's damage to +0.31 pp; training on the audited outcomes alone changes the approved default rate by −1.45 pp [−1.74, −1.15]. Three of seven hypotheses were not supported, as the study reports.
+- **When reject inference works (prespecified).** Across the Taiwan selection grid, the estimation error using only accepted labels ranges from 1.37 to 3.27 pp. Bayesian evaluation reduces error at the steepest finite slope (−1.40 pp [−1.69, −0.92] at s = 4). We evaluate the accepts-trained logistic prior on validation rejects: AUC 0.77 at s = 1 and 0.41 under a hard cutoff, where BASL raises the default rate by +2.97 pp (folds +0.94 to +7.83). A random 5% audit of training rejects lifts that AUC to 0.71 and reduces the BASL gap to +0.13 pp [−0.07, +0.30]. Adding audited outcomes to ordinary supervised training changes the approved default rate by −1.45 pp [−1.74, −1.15]. H2, H4 and H5b missed their prespecified criteria.
 
 - **Which outcomes decide a policy.** Totals for the four bands between five cutoffs identify 50 of 50 pairwise differences; totals for ten prior-risk deciles identify 0.
 
@@ -127,11 +127,11 @@ The main design accepts each applicant with probability 0.05 + 0.90 expit(index)
 | Prosper | soft | 56.5% | 8.2% / 16.5% | 1.35 → 0.35 | 3.40% → 3.41% |
 | Prosper | hard | 56.4% | 6.5% / 18.6% | 1.43 → 0.50 | 3.62% → 3.77% |
 
-Stronger selection makes accepted-only evaluation worse and Bayesian evaluation helps more; on Taiwan the paired interval now excludes zero. BASL becomes worse on Taiwan in every fold, though by very different amounts; the borrower-bootstrap intervals hold the fitted models fixed and understate that variation. On the hard-cutoff validation rejects the accepts-trained logistic prior averages 9.6% against an actual 43.3% and ranks them with AUC 0.41, so a logistic pseudo-labeler marks many risky rejects as good, while even this understated prior moves the evaluation toward the truth. The check was added after the main results and is exploratory. [Design and interpretation](../docs/hard-selection.md) · [All quantities](hard_selection.csv)
+Stronger selection makes accepted-only evaluation worse and Bayesian evaluation helps more; on Taiwan the paired interval now excludes zero. BASL becomes worse on Taiwan in every fold, though by very different amounts; the borrower-bootstrap intervals hold the fitted models fixed and understate that variation. On the hard-cutoff validation rejects the accepts-trained logistic prior averages 9.6% against an actual 43.3% and ranks them with AUC 0.41. This measures the evaluation prior. BASL fits a separate labeler in each round, so the prior's AUC alone cannot identify the cause of BASL's higher default rate. The check was added after the main results and is exploratory. [Design and interpretation](../docs/hard-selection.md) · [All quantities](hard_selection.csv)
 
 ## When does reject inference work?
 
-A prespecified study varies the sharpness of simulated historical selection at a fixed acceptance share and adds a random 5% audit of training rejects to the reject model. Folds, seeds and scorecards follow the main experiment.
+At finite slopes the simulation targets the same expected approval share. Under the hard cutoff, preserving tied scores raises the realized Taiwan approval share from 63.7% to 67.3%. We add a random 5% audit of training rejects to the reject model. Folds, seeds and scorecards follow the main experiment.
 
 | Taiwan | s = 0.5 | s = 1 | s = 2 | s = 4 | hard |
 |---|---|---|---|---|---|
@@ -141,10 +141,10 @@ A prespecified study varies the sharpness of simulated historical selection at a
 | Evaluation error, Bayesian with audited prior | 1.74 | 1.52 | 1.26 | 0.91 | 1.29 |
 | Reject AUC, logistic / audited prior | 0.77 / 0.76 | 0.77 / 0.77 | 0.70 / 0.76 | 0.40 / 0.75 | 0.41 / 0.71 |
 | BASL − accepted-only ABR, pp (fold range) | −0.09 (−0.20 to +0.17) | −0.04 (−0.19 to +0.39) | −0.01 (−0.20 to +0.14) | +0.01 (−0.53 to +1.34) | +2.97 (+0.94 to +7.83) |
-| Same with the audit | −0.12 | +0.00 | +0.06 | +0.04 | +0.31 |
+| Same with the audit | −0.07 | +0.02 | −0.02 | −0.06 | +0.13 |
 | Training on audited outcomes, ABR change, pp | −0.16 | −0.15 | −0.07 | −0.71 | −1.45 |
 
-Accepted labels mislead more as selection sharpens, and Bayesian evaluation helps once selection is moderate. The accepts-trained logistic model ranks rejects backwards under sharp selection; that is when BASL damages the scorecard. A small random audit repairs the reject model, and training on its outcomes improves the scorecard where BASL harms it. Prosper moves in the same direction with smaller selection effects. [Protocol](../docs/selection-strength-protocol.md) · [Results and hypotheses](../docs/selection-strength.md) · [All quantities](selection_strength.csv)
+On Taiwan the Bayesian correction reduces estimation error at slope 4 and under the hard cutoff. Under that cutoff the accepts-trained evaluation prior ranks validation rejects poorly. Revealing outcomes for a random sample of training rejects improves its ranking, and adding the revealed labels to ordinary scorecard training lowers approved defaults. Prosper has one later-period holdout. The hypothesis table reports results across both cohorts. [Protocol](../docs/selection-strength-protocol.md) · [Results and hypotheses](../docs/selection-strength.md) · [All quantities](selection_strength.csv)
 
 ## Can a small randomized audit improve ABR measurement?
 

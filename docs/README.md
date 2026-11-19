@@ -1,6 +1,6 @@
 # Documents
 
-Start with the [project summary](../README.md), the [research report](../results/report.md) and the [contributions page](contributions.md). The pages below hold the designs, protocols and results behind each claim, grouped by question. Pages marked *protocol* were committed before the outcomes they test were opened.
+Start with the [project summary](../README.md), the [research report](../results/report.md) and the [contributions page](contributions.md). The pages below hold the designs, protocols and results behind each claim, grouped by question. Pages marked *protocol* record the planned tests. The [analysis plan](analysis-plan.md) identifies results that were already known when each follow-up was designed.
 
 ## 1. Replicating the paper
 

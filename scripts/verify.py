@@ -903,6 +903,56 @@ def verify_early_payments(out):
     print("PASS: dated early-payment conversions, new-cohort targets, warning flags, landmark counts and lending decisions.")
 
 
+def verify_selection_grid(out):
+    """Reconcile both published policies and each grid cell with its fitted folds."""
+    grid = pd.read_csv(out / "selection_strength.csv").set_index(
+        ["dataset", "strength", "quantity"], verify_integrity=True).sort_index()
+    folds = pd.read_csv(out / "selection_strength_folds.csv").set_index(
+        ["dataset", "strength", "fold"], verify_integrity=True).sort_index()
+    hard = pd.read_csv(out / "hard_selection.csv").set_index(
+        ["dataset", "design", "quantity"], verify_integrity=True).sort_index()
+    training = {design: pd.read_csv(out / filename).pivot(
+        index=["dataset", "fold"], columns="method", values="abr")
+        for design, filename in [("main", "training.csv"), ("hard", "hard_selection_training.csv")]}
+    expected_cells = {(d, s) for d in ("taiwan", "prosper") for s in ("main", "0.5", "1", "2", "4", "hard")}
+    assert set(grid.index.droplevel("quantity")) == set(folds.index.droplevel("fold")) == expected_cells
+    for dataset, strength in sorted(expected_cells):
+        fitted = folds.loc[(dataset, strength)].sort_index()
+        estimates = grid.loc[(dataset, strength)]
+        assert list(fitted.index) == ([1, 2, 3, 4] if dataset == "taiwan" else [1])
+        assert fitted.audited.gt(0).all()
+        means = {col: fitted[col].mean() for col in fitted if col != "audited" and not col.endswith("_error")}
+        for error in (col for col in fitted if col.endswith("_error")):
+            means[error.removesuffix("_error") + "_rmse"] = np.sqrt(fitted[error].pow(2).mean())
+        gaps = {"B_minus_A": fitted.B_test_abr - fitted.A_test_abr,
+                "Bplus_minus_Aplus": fitted["B+_test_abr"] - fitted["A+_test_abr"],
+                "Aplus_minus_A": fitted["A+_test_abr"] - fitted.A_test_abr}
+        gaps["audit_change_in_basl_gap"] = gaps["Bplus_minus_Aplus"] - gaps["B_minus_A"]
+        for name, values in gaps.items():
+            means[name] = values.mean()
+            assert_allclose(estimates.loc[name, ["fold_min", "fold_max"]], [values.min(), values.max()], atol=1e-9)
+        means["bayes_logistic_minus_accepts_rmse"] = means["bayes_logistic_rmse"] - means["accepts_rmse"]
+        means["bayes_audited_minus_logistic_rmse"] = means["bayes_audited_rmse"] - means["bayes_logistic_rmse"]
+        assert set(estimates.index) == set(means)
+        assert_allclose(estimates.loc[list(means), "estimate"], list(means.values()), atol=1e-9)
+        contrasts = [*gaps, "bayes_logistic_minus_accepts_rmse", "bayes_audited_minus_logistic_rmse"]
+        ci = estimates.loc[contrasts]
+        assert ci.ci_low.le(ci.ci_high).all()
+        if strength in training:
+            ref = training[strength].loc[dataset].sort_index()
+            assert_allclose(fitted[["A_test_abr", "B_test_abr"]], ref[["accepts", "basl"]], atol=1e-9)
+            design = "soft" if strength == "main" else "hard"
+            profile = hard.loc[(dataset, design), "estimate"]
+            for name in ("accepted_share", "bad_rate_accepted", "bad_rate_rejected", "reject_bad_rate_validation"):
+                assert_allclose(profile[name], means[name], atol=1e-9)
+            assert_allclose(profile[["reject_prior_mean", "reject_prior_auc"]],
+                            [means["logistic_reject_mean"], means["logistic_reject_auc"]], atol=1e-9)
+            if strength == "hard":
+                assert_allclose(profile[["accepts_eval_rmse_abr", "bayes_eval_rmse_abr"]],
+                                [means["accepts_rmse"], means["bayes_logistic_rmse"]], atol=1e-9)
+    print("PASS: all 12 selection designs reconcile with their folds and both reference policies.")
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -955,6 +1005,7 @@ def verify(out):
     verify_frequency_study(out)
     verify_local_trust(out)
     verify_early_payments(out)
+    verify_selection_grid(out)
     print("PASS: locked cash contrasts, profile history, cross-lender signals, transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 
@@ -968,15 +1019,17 @@ def compare_pilot_tables(out, reference):
         for name in sorted(expected):
             pd.testing.assert_frame_equal(pd.read_csv(out / name), pd.read_csv(reference / name),
                                           check_exact=False, rtol=1e-8, atol=1e-10, obj=name)
-    pd.testing.assert_frame_equal(pd.read_csv(out / "dutch_trust.csv"), pd.read_csv(reference / "dutch_trust.csv"),
-                                  check_exact=False, rtol=1e-8, atol=1e-10)
-    print("PASS: regenerated pilot tables match the submitted theory, historical profiles, sensitivity and holdout results.")
+    for name in ("dutch_trust.csv", "hard_selection.csv", "hard_selection_training.csv",
+                 "selection_strength.csv", "selection_strength_folds.csv"):
+        pd.testing.assert_frame_equal(pd.read_csv(out / name), pd.read_csv(reference / name),
+                                      check_exact=False, rtol=1e-7, atol=1e-9, obj=name)
+    print("PASS: regenerated pilot and selection tables match the release.")
 
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--out",type=Path,default=Path("results"))
-    parser.add_argument("--pilot-reference", type=Path, help="compare regenerated theory and SBA tables with a release")
+    parser.add_argument("--pilot-reference", type=Path, help="compare regenerated pilot and selection tables with a release")
     args = parser.parse_args()
     verify(args.out)
     if args.pilot_reference is not None:

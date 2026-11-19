@@ -19,5 +19,5 @@ jobs:
         run: make verify
       - name: Download pinned public sources and rerun the research pipeline
         run: make all OUT=.build/ci-results
-      - name: Compare regenerated pilot and targeting tables with the release
+      - name: Compare regenerated pilot and selection tables with the release
         run: PYTHONPATH=src .venv/bin/python scripts/verify.py --out .build/ci-results --pilot-reference results

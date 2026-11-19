@@ -58,6 +58,9 @@ def run_split(pop, split, seed):
     accepted, rejected = fit[a[fit]], fit[~a[fit]]
     audit = np.sort(np.random.default_rng(2026 + seed).choice(
         rejected, int(round(AUDIT_SHARE * len(rejected))), replace=False))
+    # BASL samples positions in this pool. Keep the shared rejects in fit-split
+    # order so that an empty audit gives exactly the unaudited treatment.
+    unaudited = rejected[~np.isin(rejected, audit)]
     plus = np.r_[accepted, audit]
     weight = np.r_[np.ones(len(accepted)), np.full(len(audit), AUDIT_WEIGHT)]
     priors = {"logistic": logistic(X[accepted], y[accepted]), "audited": logistic(X[plus], y[plus], weight)}
@@ -71,7 +74,7 @@ def run_split(pop, split, seed):
         "B": fit_basl(X[accepted], y[accepted], X[rejected], X[stop], labels[stop], stop_prior("logistic"),
                       seed=seed, config=config).model,
         "A+": fit_scorecard(X[plus], y[plus], seed=seed),
-        "B+": fit_basl(X[plus], y[plus], X[np.setdiff1d(rejected, audit)], X[stop], labels[stop],
+        "B+": fit_basl(X[plus], y[plus], X[unaudited], X[stop], labels[stop],
                        stop_prior("audited"), seed=seed, config=config).model,
     }
     score = models["A"].predict_proba(X[val])[:, 1]

@@ -550,9 +550,9 @@ def hard_selection_section(out):
         "interval now excludes zero. BASL becomes worse on Taiwan in every fold, though by very different amounts; the "
         "borrower-bootstrap intervals hold the fitted models fixed and understate that variation. On the hard-cutoff validation rejects the "
         f"accepts-trained logistic prior averages {100 * diag('reject_prior_mean'):.1f}% against an actual "
-        f"{100 * diag('reject_bad_rate_validation'):.1f}% and ranks them with AUC {diag('reject_prior_auc'):.2f}, so a "
-        "logistic pseudo-labeler marks many risky rejects as good, while even this understated prior moves the evaluation "
-        "toward the truth. The check was added after the main results and is exploratory. "
+        f"{100 * diag('reject_bad_rate_validation'):.1f}% and ranks them with AUC {diag('reject_prior_auc'):.2f}. "
+        "This measures the evaluation prior. BASL fits a separate labeler in each round, so the prior's AUC alone "
+        "cannot identify the cause of BASL's higher default rate. The check was added after the main results and is exploratory. "
         "[Design and interpretation](../docs/hard-selection.md) · [All quantities](hard_selection.csv)",
     ]
 
@@ -572,17 +572,17 @@ def strength_bullet(out):
     signed = lambda x: f"{100 * x:+.2f}".replace("-", "−")
     ci = lambda s, q: f"{signed(v(s, q))} pp [{signed(v(s, q, 'ci_low'))}, {signed(v(s, q, 'ci_high'))}]"
     return [
-        f"- **When reject inference works (prespecified).** As historical selection sharpens at a fixed acceptance share, "
-        f"accepted labels misstate a Taiwan scorecard's bad rate by {100 * v('0.5', 'accepts_rmse'):.2f} to "
-        f"{100 * v('hard', 'accepts_rmse'):.2f} pp. Bayesian evaluation helps once selection is moderate "
-        f"({ci('4', 'bayes_logistic_minus_accepts_rmse')} at s = 4) but not when it is very weak. Both corrections rest on a "
-        f"model of the rejects: the accepts-trained logistic model ranks them with AUC {v('1', 'logistic_reject_auc'):.2f} "
+        f"- **When reject inference works (prespecified).** Across the Taiwan selection grid, "
+        f"the estimation error using only accepted labels ranges from {100 * v('0.5', 'accepts_rmse'):.2f} to "
+        f"{100 * v('hard', 'accepts_rmse'):.2f} pp. Bayesian evaluation reduces error at the steepest finite slope "
+        f"({ci('4', 'bayes_logistic_minus_accepts_rmse')} at s = 4). We evaluate the "
+        f"accepts-trained logistic prior on validation rejects: AUC {v('1', 'logistic_reject_auc'):.2f} "
         f"at s = 1 and {v('hard', 'logistic_reject_auc'):.2f} under a hard cutoff, where BASL raises the default rate by "
         f"{signed(v('hard', 'B_minus_A'))} pp (folds {signed(v('hard', 'B_minus_A', 'fold_min'))} to "
         f"{signed(v('hard', 'B_minus_A', 'fold_max'))}). A random 5% audit of training rejects lifts that AUC to "
-        f"{v('hard', 'audited_reject_auc'):.2f} and cuts BASL's damage to {signed(v('hard', 'Bplus_minus_Aplus'))} pp; training on "
-        f"the audited outcomes alone changes the approved default rate by {ci('hard', 'Aplus_minus_A')}. Three of seven "
-        "hypotheses were not supported, as the study reports.",
+        f"{v('hard', 'audited_reject_auc'):.2f} and reduces the BASL gap to {ci('hard', 'Bplus_minus_Aplus')}. Adding "
+        f"audited outcomes to ordinary supervised training changes the approved default rate by {ci('hard', 'Aplus_minus_A')}. H2, H4 and H5b "
+        "missed their prespecified criteria.",
     ]
 
 
@@ -605,13 +605,13 @@ def selection_strength_section(out):
     frame = pd.DataFrame(rows, columns=["Taiwan", *[f"s = {s}" if s != "hard" else "hard" for s in STRENGTHS]])
     return [
         "## When does reject inference work?",
-        "A prespecified study varies the sharpness of simulated historical selection at a fixed acceptance share and adds a "
+        "At finite slopes the simulation targets the same expected approval share. Under the hard cutoff, preserving tied scores raises the realized Taiwan approval share from 63.7% to 67.3%. We add a "
         "random 5% audit of training rejects to the reject model. Folds, seeds and scorecards follow the main experiment.",
         table(frame),
-        "Accepted labels mislead more as selection sharpens, and Bayesian evaluation helps once selection is moderate. "
-        "The accepts-trained logistic model ranks rejects backwards under sharp selection; that is when BASL damages the "
-        "scorecard. A small random audit repairs the reject model, and training on its outcomes improves the scorecard "
-        "where BASL harms it. Prosper moves in the same direction with smaller selection effects. "
+        "On Taiwan the Bayesian correction reduces estimation error at slope 4 and under the hard cutoff. Under that cutoff the "
+        "accepts-trained evaluation prior ranks validation rejects poorly. Revealing outcomes for a random sample of "
+        "training rejects improves its ranking, and adding the revealed labels to ordinary scorecard training lowers "
+        "approved defaults. Prosper has one later-period holdout. The hypothesis table reports results across both cohorts. "
         "[Protocol](../docs/selection-strength-protocol.md) · [Results and hypotheses](../docs/selection-strength.md) · "
         "[All quantities](selection_strength.csv)",
     ]

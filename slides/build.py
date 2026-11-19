@@ -399,6 +399,8 @@ def result_fields():
     pp_value = lambda s, q, col="estimate": f"{100 * float(st[(s, q)][col]):.2f}"
     pp_signed = lambda s, q, col="estimate": f"{100 * float(st[(s, q)][col]):+.2f}".replace("-", "−")
     fields.update(
+        st_main_share=f"{float(st[('main', 'accepted_share')]['estimate']):.1%}",
+        st_hard_share=f"{float(st[('hard', 'accepted_share')]['estimate']):.1%}",
         st_acc_lo=pp_value("0.5", "accepts_rmse"), st_acc_hi=pp_value("hard", "accepts_rmse"),
         st_bayes4=pp_signed("4", "bayes_logistic_minus_accepts_rmse"),
         st_bayes4_ci=f"[{pp_signed('4', 'bayes_logistic_minus_accepts_rmse', 'ci_low')}, "

@@ -145,8 +145,8 @@ def adapt_notes(notes, page):
                             f"use pages {topic_page('Paper Table 2 · evaluation error')}–{topic_page('Calibration and AUC')} "
                             "for the paper tables, AUC and calibration; overfitting is on slide 11")
     else:
-        # The evidence book originally had a second timing plan. Only the first
-        # nine pages of this assembled file are part of the spoken presentation.
+        # The evidence book originally had a second timing plan. The spoken
+        # presentation ends before the question index.
         if text.startswith("Time: "):
             text = text.partition(". ")[2]
         # Talk slides reused as evidence keep their notes without the spoken timing.
@@ -159,6 +159,7 @@ def assemble(talk, evidence, output, fields):
     with ZipFile(talk) as base, ZipFile(evidence) as library:
         parts = {p: base.read(p) for p in base.namelist()}
         manifest = ET.fromstring(parts["[Content_Types].xml"])
+        declared = {node.get("PartName") for node in manifest.findall(f"{{{CT}}}Override")}
         pres = ET.fromstring(parts["ppt/presentation.xml"])
         pres_rels = ET.fromstring(parts["ppt/_rels/presentation.xml.rels"])
         page_ids = pres.find("p:sldIdLst", NS)
@@ -221,8 +222,10 @@ def assemble(talk, evidence, output, fields):
                 ET.SubElement(page_ids, f"{{{P}}}sldId", {"id": str(255+page), f"{{{R}}}id": rid})
                 ET.SubElement(pres_rels, f"{{{PK}}}Relationship", Id=rid, Target="/"+out_names[0], Type=R+"/slide")
                 for path, kind in ((out_names[0], "slide"), (out_names[2], "notesSlide")):
-                    ET.SubElement(manifest, f"{{{CT}}}Override", PartName="/"+path,
-                                  ContentType=f"application/vnd.openxmlformats-officedocument.presentationml.{kind}+xml")
+                    # Some reserve pages replace slides already present in the talk template.
+                    if "/"+path not in declared:
+                        ET.SubElement(manifest, f"{{{CT}}}Override", PartName="/"+path,
+                                      ContentType=f"application/vnd.openxmlformats-officedocument.presentationml.{kind}+xml")
         properties = ET.fromstring(parts["docProps/app.xml"])
         for prop in ("Slides", "Notes"):
             properties.find(f"{{{AP}}}"+prop).text = str(slide_count)

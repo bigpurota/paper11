@@ -4,11 +4,11 @@ Status: exploratory sensitivity, added after the main results showed that the si
 
 ## Why this check
 
-The main public-cohort design accepts each applicant with probability $0.05+0.90\,\mathrm{expit}(\text{index})$ of pre-outcome features. Every applicant has at least a 5% chance, so the accepted sample covers almost the whole applicant space and logged-propensity reweighting is valid. Monedo's rejects were never observed. A null result for reject inference under soft selection therefore says little about the regime the paper studies.
+The main public-cohort design accepts each applicant with probability $0.05+0.90\,\mathrm{expit}(\text{index})$ of pre-outcome features. Every applicant has at least a 5% chance of acceptance, which permits reweighting by the logged probability. In the Monedo study, routine lending left repayment missing for rejects, and a separate randomized holdout provided outcomes for evaluation. A hard cutoff lets us check how the public-cohort result changes when entire ranges of the index lack repayment labels.
 
 ## Design
 
-[The sensitivity module](../src/paper11/hard_selection.py) keeps the same index, folds, seeds, scorecards, logistic prior and metrics as [the main experiment](../src/paper11/empirical.py). Only the historical decision changes: the applicants with the highest index are accepted. Tied index values stay on one side of the cutoff, and the side is chosen to match the soft rule's realized acceptance share as closely as possible. The known acceptance probabilities become exactly 0 or 1, so no historical reject resembles an accepted case on the index. Reweighting reduces to the accepted-only estimate and is not reported.
+[The sensitivity module](../src/paper11/hard_selection.py) keeps the same index, folds, seeds, scorecards, logistic prior and metrics as [the main experiment](../src/paper11/empirical.py). The applicants with the highest index are accepted. Tied index values stay together on whichever side of the cutoff comes closest to the soft rule’s realized acceptance share. The known acceptance probabilities are exactly 0 or 1, and no index value appears on both sides. The accepted cases all receive unit inverse-probability weight, leaving no information with which to recover the missing outcomes by reweighting.
 
 ## Results
 
@@ -19,20 +19,20 @@ The main public-cohort design accepts each applicant with probability $0.05+0.90
 | Prosper | soft | 56.5% | 8.2% / 16.5% | 1.35 → 0.35 | 3.40% → 3.41% |
 | Prosper | hard | 56.4% | 6.5% / 18.6% | 1.43 → 0.50 | 3.62% → 3.77% |
 
-Paired 95% intervals, conditional on the fitted models:
+| Paired difference at the hard cutoff (95% interval), pp | Taiwan | Prosper |
+|---|---|---|
+| Bayesian minus accepted-only ABR estimation RMSE | −0.93 [−1.19, −0.66] | −0.93 [−1.31, +0.50] |
+| BASL minus accepted-only test ABR | +2.97 [+2.55, +3.33] | +0.14 [−0.09, +0.40] |
 
-* Taiwan, Bayesian minus accepted-only ABR estimation error: −0.93 pp [−1.19, −0.66]. BASL minus accepted-only test ABR: +2.97 pp [+2.55, +3.33].
-
-These intervals resample borrowers with the fitted models held fixed. That suits the evaluation contrast, which scores one fixed scorecard, but understates refitting variation in the training contrast. Across the four Taiwan folds, each fitted separately, BASL was worse every time, by +2.14, +0.94, +0.97 and +7.83 pp; the fourth fold drives the mean.
-* Prosper, the same contrasts: −0.93 pp [−1.31, +0.50] and +0.14 pp [−0.09, +0.40].
+These intervals resample borrowers with the models held fixed. Across the four Taiwan folds, each fitted separately, BASL raised the default rate every time, by +2.14, +0.94, +0.97 and +7.83 pp. The fourth fold contributes most of the mean increase.
 
 Ties in the Taiwan index leave its hard rule accepting 3.5 percentage points more applicants than the soft rule did.
 
 ## Interpretation
 
-Stronger selection makes the accepted-only estimate of a scorecard's bad rate worse, and Bayesian evaluation recovers more of the gap. It does so with a poor prior. On Taiwan's hard-cutoff validation rejects, the accepts-trained logistic prior averages 9.6% against an actual bad rate of 43.3%, and it ranks them backwards (AUC 0.41). Accepted-only evaluation treats the rejects inside a candidate's approval range as if they repaid like the accepts; even an understated prior adds part of their risk. A better prior should recover more. On Taiwan its improvement now excludes zero. On the same cohort, with no change of population, its error falls from 2.74 to 1.80 pp on Taiwan and from 0.93 to almost zero on Prosper. The paper's evaluation idea survives a selection regime closer to its own.
+On Taiwan the Bayesian evaluator reduced error more under the hard cutoff than under the soft rule. Its accepts-trained logistic prior assigned 9.6% average risk to validation rejects, against 43.3% observed, and ranked them backwards (AUC 0.41). Accepted-only evaluation computes the approval ranks and bad rates among accepted borrowers. Bayesian evaluation instead ranks the whole validation pool and inserts the prior’s probabilities at missing outcomes. The difference between evaluators therefore combines changed ranks and imputed outcomes. Scoring against the same cohort's fully observed ABR isolates the evaluation error from a change of population. On that target, error fell from 2.74 to 1.80 pp on Taiwan and from 0.93 to almost zero on Prosper.
 
-BASL does not. On Taiwan it raises the approved default rate in every fold, by about three percentage points on average, and the guarded variant that may keep the original scorecard still reaches 10.96%. Its pseudo-labels come from a logistic model fitted to the accepts, and the same kind of model ranks Taiwan's hard-cutoff rejects backwards (AUC 0.41; 0.77 under soft selection). BASL labels the rejects with the lowest predicted risk as good, so many of its new "good" labels belong to risky applicants. A logistic scorecard fitted the same way has test ABR 32.4% on the whole Taiwan population, against 8.5% for the accepted-only XGBoost. The diagnostic uses an L2 logistic model rather than BASL's L1 sampler, so it supports the mechanism without isolating it. On Prosper the BASL difference stays within noise.
+BASL increased the approved default rate on Taiwan by 2.97 pp on average. Even the guarded variant, which can keep the original scorecard, reached 10.96% ABR. A logistic scorecard trained on accepts had 32.4% integrated test ABR, against 8.5% for XGBoost trained on the same accepts. This makes poor extrapolation one plausible explanation. The reject AUC above measures the fitted L2 evaluation prior, while BASL refits an L1 labeler after each augmentation round. We did not measure the correctness of its individual pseudo-labels. On Prosper the BASL interval included zero.
 
 Two cohorts, one index and one cutoff per cohort are a narrow test. The result changes the reading of the main tables: the null BASL result is not only an artifact of soft selection, while the Bayesian evaluation result becomes stronger once selection is strong.
 

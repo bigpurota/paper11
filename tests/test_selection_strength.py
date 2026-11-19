@@ -4,6 +4,7 @@ import pandas as pd
 from scipy.special import expit
 
 from paper11.data import Population
+from paper11 import selection_strength
 from paper11.selection_strength import DRAW_SEED, at_strength, bootstrap, run_split, summarize
 
 
@@ -50,3 +51,22 @@ def test_one_split_runs_and_summarizes_with_intervals():
     gap = next(r for r in rows if r["quantity"] == "B_minus_A")
     assert np.isclose(gap["estimate"], row["B_test_abr"] - row["A_test_abr"])
     assert gap["ci_low"] <= gap["ci_high"]
+
+
+def test_zero_audit_gives_identical_fits_with_and_without_audit(monkeypatch):
+    monkeypatch.setattr(selection_strength, "AUDIT_SHARE", 0.0)
+    pop = at_strength(population(), "hard")
+    rejected_pools = []
+    real_fit_basl = selection_strength.fit_basl
+
+    def record_pool(X_accept, y_accept, X_reject, *args, **kwargs):
+        rejected_pools.append(X_reject.copy())
+        return real_fit_basl(X_accept, y_accept, X_reject, *args, **kwargs)
+
+    monkeypatch.setattr(selection_strength, "fit_basl", record_pool)
+    row, inputs = run_split(pop, pop.splits[0], 702)
+    assert row["audited"] == 0
+    np.testing.assert_array_equal(rejected_pools[0], rejected_pools[1])
+    np.testing.assert_array_equal(inputs["tests"]["A"], inputs["tests"]["A+"])
+    np.testing.assert_array_equal(inputs["tests"]["B"], inputs["tests"]["B+"])
+    np.testing.assert_allclose(inputs["priors"]["logistic"], inputs["priors"]["audited"])

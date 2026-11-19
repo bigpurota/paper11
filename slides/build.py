@@ -18,7 +18,8 @@ HERE = Path(__file__).resolve().parent
 RESULTS = HERE.parent / "results"
 SOURCES = {"simulation_fig2.png", "calibration.png", "vintage_forecasts.png", "bounds_frontier.png"}
 # Drawn here from the aggregate results at the size of their frames in the talk template.
-TALK_FIGURES = {"talk_pilot.png", "talk_dutch.png"}
+TALK_FIGURES = {"talk_pilot.png", "talk_dutch.png", "talk_strength.png"}
+STRENGTHS = ["0.5", "1", "2", "4", "hard"]
 INK, MUTED, GRID, AXIS = "#0E2D69", "#52514e", "#e1e0d9", "#c3c2b7"
 BLUE, ORANGE, AQUA, GRAY = "#2a78d6", "#eb6834", "#1baf7a", "#8d8b85"
 TOKEN = re.compile(rb"\{\{([a-z0-9_]+)\}\}")
@@ -393,6 +394,31 @@ def result_fields():
         fields[f"{key}_hard_folds"] = str(len(gaps))
         fields[f"{key}_hard_basl_worse"] = str(sum(g > 0 for g in gaps))
         fields[f"{key}_hard_basl_range"] = f"{min(gaps):+.2f} to {max(gaps):+.2f}".replace("-", "−")
+    # Prespecified selection-strength study, Taiwan.
+    st = {(r["strength"], r["quantity"]): r for r in read_table("selection_strength") if r["dataset"] == "taiwan"}
+    pp_value = lambda s, q, col="estimate": f"{100 * float(st[(s, q)][col]):.2f}"
+    pp_signed = lambda s, q, col="estimate": f"{100 * float(st[(s, q)][col]):+.2f}".replace("-", "−")
+    fields.update(
+        st_acc_lo=pp_value("0.5", "accepts_rmse"), st_acc_hi=pp_value("hard", "accepts_rmse"),
+        st_bayes4=pp_signed("4", "bayes_logistic_minus_accepts_rmse"),
+        st_bayes4_ci=f"[{pp_signed('4', 'bayes_logistic_minus_accepts_rmse', 'ci_low')}, "
+                     f"{pp_signed('4', 'bayes_logistic_minus_accepts_rmse', 'ci_high')}]",
+        st_lr_mean=f"{100 * float(st[('hard', 'logistic_reject_mean')]['estimate']):.1f}%",
+        st_ar_mean=f"{100 * float(st[('hard', 'audited_reject_mean')]['estimate']):.1f}%",
+        st_actual=f"{100 * float(st[('hard', 'reject_bad_rate_validation')]['estimate']):.1f}%",
+        st_lr_auc=f"{float(st[('hard', 'logistic_reject_auc')]['estimate']):.2f}",
+        st_ar_auc=f"{float(st[('hard', 'audited_reject_auc')]['estimate']):.2f}",
+        st_lr_auc1=f"{float(st[('1', 'logistic_reject_auc')]['estimate']):.2f}",
+        st_bl=pp_value("hard", "bayes_logistic_rmse"), st_ba=pp_value("hard", "bayes_audited_rmse"),
+        st_gap_l=pp_signed("hard", "B_minus_A"), st_gap_a=pp_signed("hard", "Bplus_minus_Aplus"),
+        st_abr_a=f"{100 * float(st[('hard', 'A_test_abr')]['estimate']):.2f}%",
+        st_abr_aplus=f"{100 * float(st[('hard', 'A+_test_abr')]['estimate']):.2f}%",
+        st_audit_gain=pp_signed("hard", "Aplus_minus_A"),
+        st_audit_ci=f"[{pp_signed('hard', 'Aplus_minus_A', 'ci_low')}, {pp_signed('hard', 'Aplus_minus_A', 'ci_high')}]",
+    )
+    audited = [int(r["audited"]) for r in read_table("selection_strength_folds")
+               if r["dataset"] == "taiwan" and r["strength"] == "hard"]
+    fields["st_audit_n"] = f"{min(audited)}–{max(audited)}"
     # Same-cohort ABR estimation error: the selection correction without any population transfer.
     within = matching(read_table("evaluation"), metric="abr")
     for key, dataset in [("tw", "taiwan"), ("pr", "prosper")]:
@@ -537,6 +563,37 @@ def talk_figures(directory):
     frame(ax)
     fig.savefig(paths["talk_dutch.png"], facecolor="white")
     plt.close(fig)
+
+    # Selection strength on Taiwan: evaluation error and BASL's training gap, by reject model.
+    st = {(r["strength"], r["quantity"]): r for r in read_table("selection_strength") if r["dataset"] == "taiwan"}
+    v = lambda s, q, col="estimate": 100 * float(st[(s, q)][col])
+    x = list(range(len(STRENGTHS)))
+    fig, (left, right) = plt.subplots(1, 2, figsize=(11.5, 3.62), dpi=200, layout="constrained")
+    for name, color, marker, q in [("Accepted labels", GRAY, "o", "accepts_rmse"),
+                                   ("Bayesian, logistic prior", BLUE, "s", "bayes_logistic_rmse"),
+                                   ("Bayesian, prior with 5% audit", AQUA, "D", "bayes_audited_rmse")]:
+        left.plot(x, [v(s, q) for s in STRENGTHS], color=color, marker=marker, lw=2, ms=7, mec="white", mew=1, label=name)
+    left.set(ylim=(0, 3.6), ylabel="pp")
+    left.set_title("Error in the estimated approved bad rate", loc="left", fontsize=13, color=INK)
+    for name, color, marker, q, dx in [("BASL, logistic labels", BLUE, "s", "B_minus_A", -0.08),
+                                       ("BASL with 5% audit", AQUA, "D", "Bplus_minus_Aplus", 0.08)]:
+        mean = [v(s, q) for s in STRENGTHS]
+        low = [m - v(s, q, "fold_min") for m, s in zip(mean, STRENGTHS, strict=True)]
+        high = [v(s, q, "fold_max") - m for m, s in zip(mean, STRENGTHS, strict=True)]
+        right.errorbar([i + dx for i in x], mean, yerr=[low, high], color=color, marker=marker, ms=7, mec="white",
+                       mew=1, lw=2, capsize=3, elinewidth=1.2, label=name)
+    right.axhline(0, color=AXIS, lw=1)
+    right.set(ylim=(-1.5, 8.2), ylabel="pp")
+    right.set_title("BASL minus its baseline, approved default rate", loc="left", fontsize=13, color=INK)
+    right.text(x[-1] - 0.25, v("hard", "B_minus_A", "fold_max") - 0.4, "range over\n4 folds", ha="right", va="top",
+               color=MUTED, fontsize=11)
+    for ax in (left, right):
+        ax.set_xticks(x, ["0.5", "1", "2", "4", "hard\ncutoff"])
+        ax.set_xlabel("Selection strength  →  sharper")
+        ax.legend(loc="upper left", fontsize=11.5, handlelength=1.8)
+        frame(ax)
+    fig.savefig(paths["talk_strength.png"], facecolor="white")
+    plt.close(fig)
     return paths
 
 
@@ -580,6 +637,30 @@ def refresh_pptx(target, fields, template, figures):
             out.writestr(item, payload)
 
 
+def rehearsal_copy(source, target, keep):
+    """Copy the talk without the template slides after `keep`, which serve only as evidence pages."""
+    dropped = lambda m: int(m.group(1)) > keep
+    with ZipFile(source) as src, ZipFile(target, "w") as out:
+        for item in src.infolist():
+            name = item.filename
+            number = re.fullmatch(r"ppt/(?:slides|notesSlides)/(?:_rels/)?(?:slide|notesSlide)(\d+)\.xml(?:\.rels)?", name)
+            if number and dropped(number):
+                continue
+            payload = src.read(item).decode("utf-8") if name.endswith((".xml", ".rels")) else src.read(item)
+            if name == "ppt/presentation.xml":
+                payload = re.sub(r'<p:sldId [^>]*:id="TalkSlide(\d+)"\s*/>',
+                                 lambda m: "" if dropped(m) else m.group(0), payload)
+            elif name == "ppt/_rels/presentation.xml.rels":
+                payload = re.sub(r'<Relationship [^>]*Id="TalkSlide(\d+)"\s*/>',
+                                 lambda m: "" if dropped(m) else m.group(0), payload)
+            elif name == "[Content_Types].xml":
+                payload = re.sub(r'<Override PartName="/ppt/(?:slides|notesSlides)/(?:slide|notesSlide)(\d+)\.xml"[^>]*/>',
+                                 lambda m: "" if dropped(m) else m.group(0), payload)
+            elif name == "docProps/app.xml":
+                payload = re.sub(r"<ap:(Slides|Notes)>\d+<", rf"<ap:\1>{keep}<", payload)
+            out.writestr(item, payload)
+
+
 def main():
     office = shutil.which("soffice") or shutil.which("libreoffice")
     if not office:
@@ -589,11 +670,13 @@ def main():
         tmp = Path(work)
         fields = result_fields()
         talk, evidence, defense = tmp / "talk.pptx", tmp / "evidence.pptx", tmp / "paper11.pptx"
+        full_talk = tmp / "talk-with-evidence.pptx"
         drawn = talk_figures(tmp)
-        refresh_pptx(talk, fields, HERE / "talk-template.pptx",
+        refresh_pptx(full_talk, fields, HERE / "talk-template.pptx",
                      {"simulation_fig2.png": RESULTS / "simulation_fig2.png", **drawn})
+        rehearsal_copy(full_talk, talk, keep=10)
         refresh_pptx(evidence, fields, HERE / "template.pptx", {name: RESULTS / name for name in SOURCES})
-        assemble(talk, evidence, defense, fields)
+        assemble(full_talk, evidence, defense, fields)
         subprocess.run([office, f"-env:UserInstallation={Path(profile).as_uri()}", "--headless",
                         "--convert-to", "pdf", "--outdir", str(tmp), str(talk), str(evidence), str(defense)], check=True)
         outputs = (defense, defense.with_suffix(".pdf"), talk.with_suffix(".pdf"),

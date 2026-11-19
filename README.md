@@ -11,10 +11,9 @@ A bank observes repayment only for the loans it approves, yet its scorecard must
 ## In short
 
 * **The simulation replicates.** Bayesian evaluation cuts the error in estimating the approved bad rate from 24.33 to 7.71 percentage points (paper: 20.10 to 9.29). BASL recovers 29.6% of the gap to full-label training, with a 95% interval of 21.2–37.3% that contains the paper's 24.8%.
-* **On public data the evaluation idea holds and the training idea does not.** With a hard historical cutoff, Bayesian evaluation lowers Taiwan's error by 0.93 points (95% interval 0.66 to 1.19). BASL never lowered defaults, and under the hard cutoff it raised Taiwan's in all four folds, by 2.97 points on average.
-* **Only outcomes that can change a decision matter.** Two approval cutoffs differ only on the borrowers between them. Outcome totals for those bands identify all 50 policy differences on our cohorts; totals by risk decile identify none.
-* **A loss-making pilot loan pays only through later decisions.** In our example it pays back after three later loans if risk persists and never if risk resets 10% of the time. A rule chosen in advance missed the only later recovery.
-* **Simple pooled rates are hard to beat.** Early defaults changed lending decisions in Dutch and Czech replays, but at the base margins the rate from other regions earned as much or more in both, and half of the correct Dutch warnings came from offsetting errors.
+* **Whether the corrections work depends on how sharply the past policy selected.** On a [prespecified grid](docs/selection-strength.md) at a fixed acceptance share, accepted labels misstate a Taiwan scorecard's bad rate by 1.37 points under weak selection and 3.27 under a hard cutoff. Bayesian evaluation helps once selection is moderate (−1.40 points, 95% interval −1.69 to −0.92). BASL never helps beyond noise and fails under the hard cutoff, by +0.94 to +7.83 points across four folds.
+* **The model of the rejects is the bottleneck, and a small random audit repairs it.** Under a hard cutoff, a logistic model fitted to accepts puts the rejects' risk at 9.6% when it is 43.3% and ranks them backwards (AUC 0.41). Revealing a random 5% of training rejects lifts that AUC to 0.71, nearly halves the Bayesian evaluation error and removes most of BASL's damage. Training on the audited outcomes alone lowers the approved default rate by 1.45 points (1.15 to 1.74), more than either correction.
+* **An audit is lending to learn.** It pays only through the later decisions its outcomes change: in our example after three later loans if risk persists, never if risk resets 10% of the time. And only borrowers between the cutoffs being compared decide a policy: their totals identify all 50 policy differences, totals by risk decile none.
 
 The paper's randomized Monedo holdout is private. Our Taiwan and Prosper tests hide outcomes of loans that were funded, under a simulated historical policy, so every estimate can be checked against the truth.
 
@@ -32,15 +31,16 @@ The paper's randomized Monedo holdout is private. Our Taiwan and Prosper tests h
 
 ![Published and reproduced Figure 2](results/simulation_fig2.png)
 
-[Simulation](docs/simulation.md) · [Implementation](docs/algorithm.md) · [Hard-cutoff sensitivity](docs/hard-selection.md) · [Deviations from the paper](docs/deviations.md)
+[Simulation](docs/simulation.md) · [Implementation](docs/algorithm.md) · [Selection strength](docs/selection-strength.md) · [Deviations from the paper](docs/deviations.md)
 
 ## Extensions
 
 Each extension applies a standard tool to the lending decision and tests it on dated data; the [contributions page](docs/contributions.md) names the tools and their sources.
 
-* [Which outcomes identify a policy comparison](docs/policy-information.md), [opposite decisions under identical totals](docs/identification.md) and [how many outcomes an audit needs](docs/decision-audit.md).
+* [Selection strength and a random audit](docs/selection-strength.md), with its [protocol](docs/selection-strength-protocol.md) and the earlier [hard-cutoff check](docs/hard-selection.md).
 * [When one pilot loan pays for its information](docs/information-value.md) and [whether such pilots can be picked in advance](docs/pilot-holdout.md).
-* [Early defaults as a warning](docs/early-warning.md), [local versus pooled rates](docs/local-trust.md) and [why a historical rate beat boosting](docs/frequency_diagnosis.md).
+* [Which outcomes identify a policy comparison](docs/policy-information.md), [opposite decisions under identical totals](docs/identification.md) and [how many outcomes an audit needs](docs/decision-audit.md).
+* Pooled rates were hard to beat: [early defaults as a warning](docs/early-warning.md), [local versus pooled rates](docs/local-trust.md) and [why a historical rate beat boosting](docs/frequency_diagnosis.md). Half of the correct Dutch warnings came from offsetting errors, and the rate from other regions matched or beat the refinements at the base margins.
 
 ## Reproduce
 

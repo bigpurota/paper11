@@ -557,6 +557,66 @@ def hard_selection_section(out):
     ]
 
 
+STRENGTHS = ["0.5", "1", "2", "4", "hard"]
+
+
+def strength_table(out):
+    """Taiwan quantities from the prespecified selection-strength study, indexed by (strength, quantity)."""
+    st = pd.read_csv(out / "selection_strength.csv")
+    return st[st.dataset == "taiwan"].set_index(["strength", "quantity"])
+
+
+def strength_bullet(out):
+    st = strength_table(out)
+    v = lambda s, q, col="estimate": st.loc[(s, q), col]
+    signed = lambda x: f"{100 * x:+.2f}".replace("-", "−")
+    ci = lambda s, q: f"{signed(v(s, q))} pp [{signed(v(s, q, 'ci_low'))}, {signed(v(s, q, 'ci_high'))}]"
+    return [
+        f"- **When reject inference works (prespecified).** As historical selection sharpens at a fixed acceptance share, "
+        f"accepted labels misstate a Taiwan scorecard's bad rate by {100 * v('0.5', 'accepts_rmse'):.2f} to "
+        f"{100 * v('hard', 'accepts_rmse'):.2f} pp. Bayesian evaluation helps once selection is moderate "
+        f"({ci('4', 'bayes_logistic_minus_accepts_rmse')} at s = 4) but not when it is very weak. Both corrections rest on a "
+        f"model of the rejects: the accepts-trained logistic model ranks them with AUC {v('1', 'logistic_reject_auc'):.2f} "
+        f"at s = 1 and {v('hard', 'logistic_reject_auc'):.2f} under a hard cutoff, where BASL raises the default rate by "
+        f"{signed(v('hard', 'B_minus_A'))} pp (folds {signed(v('hard', 'B_minus_A', 'fold_min'))} to "
+        f"{signed(v('hard', 'B_minus_A', 'fold_max'))}). A random 5% audit of training rejects lifts that AUC to "
+        f"{v('hard', 'audited_reject_auc'):.2f} and cuts BASL's damage to {signed(v('hard', 'Bplus_minus_Aplus'))} pp; training on "
+        f"the audited outcomes alone changes the approved default rate by {ci('hard', 'Aplus_minus_A')}. Three of seven "
+        "hypotheses were not supported, as the study reports.",
+    ]
+
+
+def selection_strength_section(out):
+    st = strength_table(out)
+    v = lambda s, q, col="estimate": st.loc[(s, q), col]
+    pp = lambda x: f"{100 * x:+.2f}".replace("-", "−")
+    rows = [
+        ["Bad rate, accepted / rejected"] + [f"{100 * v(s, 'bad_rate_accepted'):.1f} / {100 * v(s, 'bad_rate_rejected'):.1f}%" for s in STRENGTHS],
+        ["Evaluation error, accepted labels, pp"] + [f"{100 * v(s, 'accepts_rmse'):.2f}" for s in STRENGTHS],
+        ["Evaluation error, Bayesian with logistic prior"] + [f"{100 * v(s, 'bayes_logistic_rmse'):.2f}" for s in STRENGTHS],
+        ["Evaluation error, Bayesian with audited prior"] + [f"{100 * v(s, 'bayes_audited_rmse'):.2f}" for s in STRENGTHS],
+        ["Reject AUC, logistic / audited prior"] + [f"{v(s, 'logistic_reject_auc'):.2f} / {v(s, 'audited_reject_auc'):.2f}" for s in STRENGTHS],
+        ["BASL − accepted-only ABR, pp (fold range)"] + [
+            f"{pp(v(s, 'B_minus_A'))} ({pp(v(s, 'B_minus_A', 'fold_min'))} to {pp(v(s, 'B_minus_A', 'fold_max'))})"
+            for s in STRENGTHS],
+        ["Same with the audit"] + [pp(v(s, "Bplus_minus_Aplus")) for s in STRENGTHS],
+        ["Training on audited outcomes, ABR change, pp"] + [pp(v(s, "Aplus_minus_A")) for s in STRENGTHS],
+    ]
+    frame = pd.DataFrame(rows, columns=["Taiwan", *[f"s = {s}" if s != "hard" else "hard" for s in STRENGTHS]])
+    return [
+        "## When does reject inference work?",
+        "A prespecified study varies the sharpness of simulated historical selection at a fixed acceptance share and adds a "
+        "random 5% audit of training rejects to the reject model. Folds, seeds and scorecards follow the main experiment.",
+        table(frame),
+        "Accepted labels mislead more as selection sharpens, and Bayesian evaluation helps once selection is moderate. "
+        "The accepts-trained logistic model ranks rejects backwards under sharp selection; that is when BASL damages the "
+        "scorecard. A small random audit repairs the reject model, and its outcomes improve the scorecard more than either "
+        "correction. Prosper moves in the same direction with smaller selection effects. "
+        "[Protocol](../docs/selection-strength-protocol.md) · [Results and hypotheses](../docs/selection-strength.md) · "
+        "[All quantities](selection_strength.csv)",
+    ]
+
+
 def summary_section(out, sims, comp, contrast):
     """Headline results, recomputed from the same tables as the sections below."""
     sim = sims[sims.metric == "abr"].set_index("statistic")
@@ -609,14 +669,7 @@ def summary_section(out, sims, comp, contrast):
         "so the paper's profit gain does not appear here. On the same Taiwan cohort, with no change of population, Bayesian "
         f"evaluation is worse ({pp(same['taiwan','bayes'])} versus {pp(same['taiwan','accepts'])} pp) because its logistic "
         f"prior is weak there; on Prosper it improves ({pp(same['prosper','accepts'])} → {pp(same['prosper','bayes'])} pp).",
-        f"- **Strength of selection.** Our main design gives every applicant a 5–95% chance of approval. With a hard cutoff "
-        f"on the same index, Bayesian evaluation lowers Taiwan's ABR estimation error from {pp(hard.loc[('taiwan','accepts_eval_rmse_abr'),'estimate'])} "
-        f"to {pp(hard.loc[('taiwan','bayes_eval_rmse_abr'),'estimate'])} pp, a change of {hard_interval('taiwan','bayes_minus_accepts_rmse_abr')} that "
-        f"excludes zero, while BASL raises its default rate in {worse} of {len(gaps)} separately fitted folds "
-        f"({min(gaps):+.2f} to {max(gaps):+.2f} pp, mean {hard_interval('taiwan','basl_minus_accepts_abr')} with models held fixed). On Prosper "
-        f"the error falls from {pp(hard.loc[('prosper','accepts_eval_rmse_abr'),'estimate'])} to {pp(hard.loc[('prosper','bayes_eval_rmse_abr'),'estimate'])} pp "
-        f"and BASL changes ABR by {hard_interval('prosper','basl_minus_accepts_abr')}. The evaluation idea survives strong "
-        "selection; the training idea does not in these cohorts. This check was added after the main results.",
+        *strength_bullet(out),
         f"- **Which outcomes decide a policy.** Totals for the four bands between five cutoffs identify "
         f"{int(info.loc['expansion_bands','pairs_exact_at_actual_binary_totals'])} of {int(info.loc['expansion_bands','n_policy_pairs'])} "
         f"pairwise differences; totals for ten prior-risk deciles identify {int(info.loc['prior_deciles','pairs_exact_at_actual_binary_totals'])}.",
@@ -685,6 +738,7 @@ def write_report(out, comp):
         "## Conditional lending policy",table(bp),
         "The entries are margin in units of principal per arriving applicant using an assumed 10% return if repaid. Issuance rates, per-issued-unit margins and numerical cutoffs are in [policy.csv](policy.csv). At 50% LGD all three estimators select the upper end of the allowed rate grid, so the realized difference is exactly zero. The paper’s stated gain in profit depends on its pricing, approval decisions and Spanish borrower population.",
         *hard_selection_section(out),
+        *selection_strength_section(out),
         "## Can a small randomized audit improve ABR measurement?",table(audit),
         "For a fixed proposed 30% approval policy, each audit reveals 10 or 50 funded outcomes under controlled masking. Both designs reveal the same number of outcomes. Financial exploration costs may differ. Targeting only previously declined borrowers whom this policy would approve lowers sampling variability. Compare against prior-only RMSE as well: a good prior can beat a noisy small audit on a given cohort. Random disclosure identifies the fixed-policy default rate in this finite validation cohort; small samples may still be imprecise. Each result pools squared error across 500 draws per split before taking the square root.",
         *extension_sections(out),

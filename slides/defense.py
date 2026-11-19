@@ -1,5 +1,6 @@
 """Assemble the main talk and its linked question index from the two editable decks."""
 from copy import deepcopy
+import re
 from xml.etree import ElementTree as ET
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
@@ -12,8 +13,8 @@ AP = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
 NS = {"p": P, "a": A}
 INDEX = 11  # ten talk slides, then the question index
 
-# Short menu label and source page in the 38-page evidence book. The last two
-# pages use the talk's table layout and the new Dutch and Czech result fields.
+# Short menu label and source page: a number refers to the 38-page evidence book,
+# "talk:n" to a slide of the talk template kept for questions after the summary.
 TOPICS = [
     ("Data and holdout design", 4), ("Paper Table 2 · evaluation error", 6),
     ("Paper Table 3 · four score metrics", 22), ("Calibration and AUC", 18),
@@ -22,7 +23,7 @@ TOPICS = [
     ("Pilot break-even horizon", 28), ("An Estonian decision switch", 30),
     ("Pilot selection on later loans", 32), ("The missed Finnish pilot", 33),
     ("Historical frequency vs. boosting", 35), ("Pooling at Wells Fargo", 38),
-    ("Netherlands · timing and receipts", None), ("Czech bank · decisions and CZK", None),
+    ("Netherlands · early defaults", "talk:11"), ("Czech bank · early arrears", "talk:12"),
 ]
 
 
@@ -136,68 +137,6 @@ def navigation(slide, rels, page):
             align="r", jump=link(rels, INDEX))
 
 
-def reserve_details(slide, notes, topic, fields):
-    f = fields
-    if topic == "Netherlands · timing and receipts":
-        title = "Dutch defaults arrived later in the newer cohorts"
-        intro = "In November 2023, how many defaults by year one were already visible by month six?"
-        table = [
-            ["Dutch cohorts", "By month six / by year one", "Share visible"],
-            ["Mature calibration loans", f["nl_old_capture_n"], f["nl_old_capture_share"]],
-            ["Younger loans · later audit", f["nl_young_capture_n"], f["nl_young_capture_share"]],
-        ]
-        detail = (f"The forecast for the younger loans was {f['nl_nov_forecast']}. Their own year-one default "
-                  f"rate later reached {f['nl_nov_actual']}.")
-        conclusion = (f"On 24 May 2024, {f['nl_paid']} of "
-                      f"{f['nl_snapshot_n']} loans aged 60–89 days had recorded a payment and {f['nl_past_due']} were at least 30 days overdue. The snapshot followed all eight forecasts.")
-        source = "Bondora · early_dutch_episodes.csv, early_dutch_snapshot.csv and the matched November cohort audit."
-        desc = ("The two capture rows compare unadjusted observed counts. The forecast uses a half-count for "
-                "the capture fraction plus ten pseudo-observations toward the old local risk. The annual count "
-                "rate on the exact same young loans became available later. May cash records show any positive "
-                "receipt, which does not imply that the first scheduled instalment was paid in full or on time.")
-    else:
-        title = "A Czech policy switch could gain or lose money"
-        intro = ("At the same 18.18% cutoff, the six-month rule changes different decisions depending on "
-                 "which historical forecast it replaces.")
-        table = [
-            ["Comparator", "New approvals / declines", "Scenario change in CZK"],
-            ["Own-region history", f["cz_local_switch"], f["cz_local_money"]],
-            ["Other-region history", f["cz_other_switch"], f["cz_other_money"]],
-        ]
-        detail = ("In May 1997, the updated rule would fund one additional east Bohemian loan and decline "
-                  "four north Moravian loans. None of the five recorded a year-one shortfall.")
-        conclusion = (f"The signal flagged {f['cz_flags']} books below both rates and was right in {f['cz_hits']}. "
-                      f"The outcome fell below both in {f['cz_below']} of all {f['cz_books']} books.")
-        source = "PKDD’99 bank ledger · early_czech_episodes.csv, early_czech_direction.csv and early_czech_policy.csv."
-        desc = ("A book is the newly issued loans of one region in a month. The test holds each book fixed across "
-                "the rules. Original issuance was observed, but these funding choices and cash differences are a "
-                "replay. +10% on non-events and −45% on an event price a shortfall under explicit assumptions. "
-                "The median book had only two loans, and 120 books had zero shortfalls.")
-    sh = shapes(slide)
-    for name, value in (("Title", title), ("text-64-153", intro), ("text-64-458", detail),
-                        ("text-64-574", conclusion), ("text-64-674", source)):
-        label(sh[name], value)
-    tbl = slide.find(".//a:tbl", NS)
-    while len(tbl.findall("a:tr", NS)) > len(table):
-        # Retain the bottom ruled row from the source table.
-        tbl.remove(tbl.findall("a:tr", NS)[-2])
-    # The talk slide used as the prototype may change its layout; fix this page's own.
-    row_height = 50
-    for tr in tbl.findall("a:tr", NS):
-        tr.set("h", str(9525 * row_height))
-    frame = slide.find(".//p:graphicFrame/p:xfrm", NS)
-    frame.find("a:off", NS).set("y", str(9525 * 244))
-    frame.find("a:ext", NS).set("cy", str(9525 * row_height * len(table)))
-    for name, y, height in (("text-64-458", 458, 66), ("text-64-574", 574, 80)):
-        xfrm = sh[name].find("p:spPr/a:xfrm", NS)
-        xfrm.find("a:off", NS).set("y", str(9525 * y))
-        xfrm.find("a:ext", NS).set("cy", str(9525 * height))
-    for tr, values in zip(tbl.findall("a:tr", NS), table, strict=True):
-        for cell, value in zip(tr.findall("a:tc", NS), values, strict=True):
-            set_text(cell.find("a:txBody", NS), value)
-    set_text(notes_body(notes), desc+" Source: "+source)
-
-
 def adapt_notes(notes, page):
     body = notes_body(notes)
     text = " ".join(node.text or "" for node in body.findall(".//a:t", NS))
@@ -211,6 +150,8 @@ def adapt_notes(notes, page):
         # nine pages of this assembled file are part of the spoken presentation.
         if text.startswith("Time: "):
             text = text.partition(". ")[2]
+        # Talk slides reused as evidence keep their notes without the spoken timing.
+        text = re.sub(r"^\d+:\d\d\. ", "", text)
         text = text.removeprefix("Backup for questions. ").removeprefix("Back-up. ")
     set_text(body, text)
 
@@ -222,6 +163,14 @@ def assemble(talk, evidence, output, fields):
         pres = ET.fromstring(parts["ppt/presentation.xml"])
         pres_rels = ET.fromstring(parts["ppt/_rels/presentation.xml.rels"])
         page_ids = pres.find("p:sldIdLst", NS)
+        # Talk-template slides after the summary are reused as evidence pages below.
+        spoken = {f"TalkSlide{k}" for k in range(1, INDEX)}
+        for node in list(page_ids):
+            if node.get(f"{{{R}}}id") not in spoken:
+                page_ids.remove(node)
+        for rel in list(pres_rels):
+            if rel.get("Id", "").startswith("TalkSlide") and rel.get("Id") not in spoken:
+                pres_rels.remove(rel)
         slide_count = INDEX + len(TOPICS)
         for page in range(5, slide_count+1):
             new = page >= INDEX
@@ -231,7 +180,7 @@ def assemble(talk, evidence, output, fields):
                 n, source = 9, base
             else:
                 original = TOPICS[page-INDEX-1][1]
-                n, source = (original, library) if original else (5, base)
+                n, source = (int(original[5:]), base) if isinstance(original, str) else (original, library)
             slide, srels, notes, nrels = [ET.fromstring(source.read(p)) for p in slide_parts(n)]
             if page == 5:
                 footer = shapes(slide)["text-64-674"]
@@ -245,9 +194,6 @@ def assemble(talk, evidence, output, fields):
                 label(head["TextBox 3"], str(page))
                 header_lines = head["TextBox 2"].findall("p:txBody/a:p", NS)
                 header_lines[-1].find(".//a:t", NS).text = "Supporting evidence"
-                topic, original = TOPICS[page-INDEX-1]
-                if original is None:
-                    reserve_details(slide, notes, topic, fields)
                 # Evidence-book cross references do not apply to the assembled numbering.
                 for node in slide.findall(".//a:t", NS):
                     node.text = (node.text or "").replace(" (backup 31)", "")

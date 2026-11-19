@@ -1,6 +1,6 @@
 # What changes when the historical policy is a hard cutoff?
 
-Status: exploratory sensitivity, added after the main results showed that the simulated approval rule was soft.
+Status: exploratory sensitivity, added after the main results showed that the simulated approval rule was soft. The prespecified [selection-strength study](selection-strength.md) extends it to a grid of selection strengths and a random audit of rejects.
 
 ## Why this check
 

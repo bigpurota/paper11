@@ -42,3 +42,5 @@ We fixed the six-month conversion, the secondary three-month marker, the next ex
 ## Selection strength, added after the main results
 
 The review of the submitted results found that the simulated approval rule gives every applicant a 5–95% chance. We then added one sensitivity that replaces it with a hard cutoff on the same index and acceptance share, keeping every other choice. It was specified and run after the main results were known and is reported as exploratory. [Design and results](hard-selection.md)
+
+A follow-up [protocol](selection-strength-protocol.md) fixed a grid of selection strengths, a 5% random audit of rejects and seven hypotheses before the study was run; it was committed and pushed first. [Results](selection-strength.md)

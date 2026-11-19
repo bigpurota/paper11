@@ -9,6 +9,7 @@ Start with the [project summary](../README.md), the [research report](../results
 | [Implementation](algorithm.md) | How are BASL and Bayesian evaluation implemented? |
 | [Simulation](simulation.md) | Does the synthetic acceptance loop reproduce Figure 2? |
 | [Hard-cutoff sensitivity](hard-selection.md) | Do the public-data conclusions change under strong selection? |
+| [Selection strength and audit](selection-strength.md) · [Protocol](selection-strength-protocol.md) *protocol* | When does reject inference work, and can a small random audit of rejects repair it? |
 | [Calendar forecasts](vintages.md) | Does better historical measurement improve next-quarter forecasts? |
 | [Deviations](deviations.md) | Where and why does the replication differ from the paper? |
 

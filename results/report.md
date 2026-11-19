@@ -2,7 +2,7 @@
 
 Team 12 · Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox.
 
-This report uses the assigned preprint and public borrower records. An approval scorecard is needed for everyone who applies, while repayment is usually observed only for the people actually financed. Training with inferred labels and evaluating on the complete applicant mix solve different problems.
+This report uses the July 2024 preprint and public borrower records. An approval scorecard is needed for everyone who applies, while repayment is usually observed only for the people actually financed. Training with inferred labels and evaluating on the complete applicant mix solve different problems.
 
 ## Summary
 
@@ -218,7 +218,7 @@ Hold all visible outcomes fixed. Grant access to the actual number of defaults i
 
 For the Prosper validation pool, 160 repayments among the additional approvals were hidden. In the retrospective truth, 17 defaulted. The exact random-order audit uses 14.46 labels on average. At the last profitable and first unprofitable hidden default counts it uses 152.89 and 153.02. The prespecified review schedule bounds wrong-direction decisions by 5% for each fixed population. The required sample depends on how close that population is to break-even. [Stopping boundaries, proof, and sample-size distributions](../docs/decision-audit.md)
 
-[What the authors did, what Team 12 added, and how the evidence compares with Paper 15](../docs/contributions.md)
+[Research contributions, methods and limitations](../docs/contributions.md)
 
 ### Correcting old labels versus predicting the next quarter
 

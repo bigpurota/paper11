@@ -1,6 +1,6 @@
-# What Team 12 added to the assigned paper
+# Research contributions
 
-The reference point is the assigned July 2024 preprint, including its online appendix. The original authors introduced BASL and Bayesian scorecard evaluation. They ran a feedback simulation, compared methods on an independently randomized Monedo holdout, varied prior quality, studied missingness and varied loss given default. Our replication implements that work independently. Our research additions ask the following questions.
+The replication follows the July 2024 preprint and its online appendix. The original authors introduced BASL and Bayesian scorecard evaluation. They ran a feedback simulation, compared methods on an independently randomized Monedo holdout, varied prior quality, studied missingness and varied loss given default. Our replication implements that work independently. Our research additions ask the following questions.
 
 ## In brief
 
@@ -30,7 +30,7 @@ The reference point is the assigned July 2024 preprint, including its online app
 | When can the bank rely on a local rate? | Trace a Dutch startup forecast to the loans that actually supplied its labels. Transfer one prespecified shrinkage rule to a different lender and source, then test both the average forecast and its advance local-versus-broader choice. | The rule improved on always using sparse local history. The outside-state benchmark matched its lending decisions at both tested thresholds. [Dutch dates](dutch-frequency.md) · [Derivation](local-trust.md) · [External test](local-trust-bank.md) |
 | Can a lender spot a fall before annual outcomes mature? | Convert serious payment trouble in younger, age-matched cohorts to a year-one risk forecast. Derive an observable warning threshold. Lock the calculation before scoring actual scheduled instalments from a separate bank. | Six of seven Dutch warnings were correct when measured against the later portfolios, three of them only because the conversion undershot the cohorts it measured. It changed Czech lending decisions while the other-region benchmark retained a lower forecast loss. [Rule and evidence](early-warning.md) |
 
-The methods are original implementations and applications relative to this assignment. Random assignment in the Philippines was carried out by other researchers. Established devices such as bounds, bootstrapping, random sampling and portfolio accounting are credited as methods. We claim the comparisons, calculations and empirical conclusions for this replication.
+Karlan and Zinman conducted the Philippine credit experiment. We used their public data to evaluate lending policies and repayment assumptions.
 
 ## Established methods behind the extensions
 
@@ -46,14 +46,10 @@ Several extensions apply standard tools to the lending problem. The contribution
 | Six-month to year-one conversion | Development factors in chain-ladder reserving; vintage curves | Mack (1993), *ASTIN Bulletin* 23(2) |
 | Philippine offers | Randomized credit scoring | Karlan and Zinman (2011), *Science*; [analytic file](rct.md) |
 
-## How the previous team project compares
+## Scope and attribution
 
-| Strength of Paper 15 | Counterpart in Paper 11 | Remaining limitation |
-|---|---|---|
-| It compared a bar-based price-impact proxy to actual individual trades, revealing a substantial scale difference. [Direct validation](https://github.com/bigpurota/paper15-lou-shu/tree/master/results/upgrades/hf_lambda) | Masked, fully known credit outcomes give a truth check. In a separate real credit experiment we reconcile assignments, actual disbursements and cash receipts. | Only eight funded Philippine accounts have principal shortfall exceeding one peso. That sample is too small for a convincing head-to-head BASL training test. |
-| It examined cross-market and later-period transfer using MOEX and US evidence. [Independent extensions](https://github.com/bigpurota/paper15-lou-shu/tree/master/results/upgrades) | Taiwan, US chronological cohorts and a Philippine marginal-applicant experiment address three different settings. Rolling forecasts isolate where the temporal conclusion changes. | Products and targets differ; there is no pooled cross-country estimate. |
-| It checked placebo worlds, specification sensitivity, influential periods, power and command-line reproducibility. [Robustness](https://github.com/bigpurota/paper15-lou-shu/tree/master/results/upgrades/robustness) | Independent simulation seeds, oracle and random-disclosure controls; masked-outcome invariance; paired intervals; removal of individual quarters; prior tipping points; exact checks on rare events; fresh builds and CI. | The Dutch analysis is exploratory. An external bank was reserved for each of the later pooling and early-payment tests; both primary comparisons retained uncertainty. |
+The public Taiwan and Prosper cohorts contain funded borrowers. Masking their repayment outcomes lets us measure error under a known approval rule. The Philippine trial also records who took up a randomized offer, but only eight funded accounts had a principal shortfall above one peso. These datasets differ in their products, follow-up periods and outcome definitions. We report each separately. [Data and definitions](sources.md) · [Philippine trial](rct.md)
 
-## Defending the contribution
+The Dutch early-warning analysis was exploratory. The Wells Fargo pooling test and the Czech early-payment test each used a rule fixed before scoring that external dataset. [Analysis plan](analysis-plan.md)
 
-The defense pairs the original Figure 2 with the reproduction, checks the scorecard on later Prosper loans and uses the Taiwan audit to ask when repayment information changes lending. The question index opens the additional evidence, including the policy bounds, the Philippine offer lottery and the Dutch and Czech early-payment comparisons. [Talk and supporting slides](../slides/README.md)
+Team 12 implemented the replication and extensions with assistance from Codex and Claude.

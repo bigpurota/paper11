@@ -1,6 +1,6 @@
 # Paper 11 defense
 
-Open the [defense PowerPoint](paper11.pptx) or [defense PDF](paper11.pdf) for the presentation. The fourteen talk slides take about **14 minutes** at the planned pace, inside the seminar's 15-minute slot, and follow lecture 1's order: problem, method, results and reproduction, critique, next steps. Slide 14 summarizes the talk. Select **Questions →** to open the topic index on slide 15, then choose a question. Every evidence slide has a **← Question index** link back. Typing the page number also works in PowerPoint slide show. A [fourteen-page rehearsal PDF](talk.pdf) contains the talk alone.
+The [short presentation](talk.pdf) covers the research question, methods, replication and extensions in 14 slides. The [full PDF](paper11.pdf) and [PowerPoint](paper11.pptx) include a topic index on slide 15. Each supporting slide links back to the index.
 
 ## Speaking plan
 
@@ -12,16 +12,16 @@ Open the [defense PowerPoint](paper11.pptx) or [defense PDF](paper11.pdf) for th
 | 1:55–4:25 | 4 | Method | Trace training with pseudo-labels and evaluation with a fixed score. Use the three-applicant example in the notes to show how a prior changes the estimated default rate. |
 | 4:25–5:20 | 5 | Results | The paper's figure and ours on the same axes. |
 | 5:20–6:30 | 6 | Results | Paper against our cohorts under soft and hard simulated selection; which idea transfers. |
-| 6:30–7:20 | 7 | Results | The lecture 3 minimum: out-of-time test, AUC, calibration, logit baseline, what the data cannot show. |
-| 7:20–8:15 | 8 | Upgrade | The prespecified grid of selection strength: when evaluation needs correcting and when BASL fails. |
-| 8:15–9:05 | 9 | Upgrade | How well the evaluation prior ranks rejected borrowers, what a 5% audit changes, and how the measured training effect varies across two refits. |
-| 9:05–9:45 | 10 | Upgrade | An audit is a pilot: its loss today against the later decisions its outcomes can change. |
+| 6:30–7:20 | 7 | Results | Compare the logistic baseline with XGBoost and BASL on later Prosper borrowers. Read the calibration plot alongside AUC. |
+| 7:20–8:15 | 8 | Extension | The prespecified grid of selection strength: when evaluation needs correcting and when BASL fails. |
+| 8:15–9:05 | 9 | Extension | How well the evaluation prior ranks rejected borrowers, what a 5% audit changes, and how the measured training effect varies across two refits. |
+| 9:05–9:45 | 10 | Extension | An audit is a pilot: its loss today against the later decisions its outcomes can change. |
 | 9:45–11:05 | 11 | Critique | How the results could be overfit, and what the authors and we did about it. |
 | 11:05–12:25 | 12 | Critique | Assumptions, a missing baseline, the profit claim and our position. |
 | 12:25–13:30 | 13 | Next steps | What we would do with three more months. |
 | 13:30–14:10 | 14 | Summary | Reject inference is only as good as its model of the rejects. |
 
-The plan leaves 50 seconds before questions. It allocates 1:55 to the problem, 2:30 to the methods, 5:20 to results and extensions, 2:40 to critique and 1:45 to next steps and the closing slide.
+Planned talk length is 14 minutes 10 seconds.
 
 ## The question index in the defense file
 
@@ -55,7 +55,7 @@ The plan leaves 50 seconds before questions. It allocates 1:55 to the problem, 2
 
 ## Full evidence reference
 
-The [38-page evidence PDF](evidence.pdf) and [its editable PowerPoint](evidence.pptx) keep the original reference numbering for detailed follow-up.
+The [evidence PDF](evidence.pdf) and [editable PowerPoint](evidence.pptx) give more detail on the experiments below. Page numbers in this table refer to that document.
 
 | Evidence pages | Topic |
 |---|---|
@@ -65,10 +65,10 @@ The [38-page evidence PDF](evidence.pdf) and [its editable PowerPoint](evidence.
 | 14, 27–32 | General break-even condition for a pilot, SBA and Bondora replays, Estonian pilot profiles and later validation. |
 | 33–38 | Finnish pilot, boosting and frequency comparisons, Dutch launch cohorts and Wells Fargo external test of pooling. |
 
-The [paper comparison](../results/paper_comparison.csv), [simulation](../docs/simulation.md), [policy-margin proof](../docs/policy-information.md), [pilot break-even condition](../docs/information-value.md) and [research report](../results/report.md) give the exact definitions behind the short talk. The evidence pages keep their original numbering so they can be located during questions.
+The [paper comparison](../results/paper_comparison.csv), [simulation](../docs/simulation.md), [policy-margin proof](../docs/policy-information.md), [pilot break-even condition](../docs/information-value.md) and [research report](../results/report.md) give the exact definitions behind the short talk.
 
 ## Updating the slides
 
 Run `python3 slides/build.py` from the repository root after regenerating the aggregate results. The builder refreshes numeric fields and figures and exports the defense, rehearsal and reference PDFs using LibreOffice. The [defense assembly](defense.py) selects the reserve and adds internal page links. It reads [the short talk template](talk-template.pptx) and [the evidence template](template.pptx). Both remain editable. Keep a dynamic field's double braces and its name within a single PowerPoint text run. Update explanatory text if a rerun changes a conclusion.
 
-Both presentations follow the cover, logo, running header and table rules from [the team’s Paper 15 slides](https://github.com/bigpurota/paper15-lou-shu/tree/0c5d43e18a5ef9134bc6fae656a29f204f31f7cb/slides). The figure bindings use the embedded image descriptions `simulation_fig2.png`, `calibration.png`, `vintage_forecasts.png` and `bounds_frontier.png`. The builder draws three charts at the size of their frames: `talk_strength.png` on slide 8 from `selection_strength.csv`, `talk_pilot.png` on slide 10 from the information-value model and `talk_dutch.png` on page 30 from `early_dutch_episodes.csv`; slide 7 binds `calibration.png`. Talk-template slides after the summary are not spoken; the assembler uses them as evidence pages 20, 30 and 31. The tables and charts can be refreshed from aggregate results. The current fit supplies the main slide 9 table. Its platform comparison uses the [two archived refits](../docs/refits/taiwan-hard-cutoff.csv) so it remains available after a new run.
+The builder reads the simulation, calibration and portfolio figures from the results directory. It draws the figures on slides 8, 10 and 30 from the selection grid, the pilot model and the dated Dutch forecasts. Slide 9 uses the [two platform refits](../docs/refits/taiwan-hard-cutoff.csv) for its comparison.

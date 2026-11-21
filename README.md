@@ -2,7 +2,7 @@
 
 A bank sees who repays only after it lends. How well can it judge a rule that would approve people it previously turned away? We replicate two methods for handling these missing outcomes and test when a lender gains from observing a real repayment.
 
-**[Presentation · 14 slides](slides/talk.pdf)** · [Slides with Q&A](slides/paper11.pdf) · [Research report](results/report.md) · [Original paper](https://arxiv.org/abs/2407.13009v1)
+**[Presentation](slides/paper11.pdf)** (talk on slides 1–14, questions after) · [PowerPoint with speaker notes](slides/paper11.pptx) · [About the slides](slides/README.md) · [Research report](results/report.md) · [Original paper](https://arxiv.org/abs/2407.13009v1)
 
 *HSE DSBA Research Seminar · Team 12*<br>
 Andrey Tsember, Sofia Shapovalova, Ksenia Stepanova, Marat Bineman and Alexia Fox
@@ -28,7 +28,7 @@ Monedo supplied the paper’s private randomized benchmark. On Taiwan and Prospe
 
 ### A random audit in Taiwan
 
-Under the hard approval cutoff, revealing outcomes for a random 5% of training rejects lowered the ordinary scorecard’s default rate by **1.45 percentage points on macOS** and **1.57 on Linux**. Once both models had those outcomes, adding BASL changed the rate by +0.13 and +0.14 points. Both 95% intervals for that extra step include zero. [Paired results](docs/platform-refit.md)
+Under the hard approval cutoff, revealing outcomes for a random 5% of training rejects lowered the ordinary scorecard’s default rate by **1.45 percentage points on macOS** and **1.57 on Linux**. Once both models had those outcomes, adding BASL changed the rate by +0.13 and +0.14 points. Both 95% intervals for that extra step include zero. Measured as in the paper’s simulation, the audit closes 109% of the gap to a scorecard trained with every outcome (95% interval 91–135%), while BASL widens it (−223%); this comparison was added after the protocol. [Paired results](docs/platform-refit.md) · [Gap to full information](docs/selection-strength.md#exploratory-follow-up-how-much-of-the-gap-to-full-information-does-each-fix-close)
 
 ![Taiwan selection experiment. At the hard cutoff, auditing rejects reduces Bayesian evaluation error on the left. On the right, the gap in approved defaults between BASL and ordinary training drops from +2.97 to +0.13 percentage points.](slides/talk_strength.png)
 

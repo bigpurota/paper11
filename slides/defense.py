@@ -138,20 +138,17 @@ def navigation(slide, rels, page):
 
 
 def adapt_notes(notes, page):
+    if page < INDEX:
+        return  # Spoken slides keep their timed notes unchanged.
     body = notes_body(notes)
     text = " ".join(node.text or "" for node in body.findall(".//a:t", NS))
-    if page < INDEX:
-        text = text.replace("see evidence 6–7 and 18 for the paired comparisons, AUC and calibration, or 21 for the alternative stopping rule",
-                            f"use pages {topic_page('Paper Table 2 · evaluation error')}–{topic_page('Calibration and AUC')} "
-                            "for the paper tables, AUC and calibration; overfitting is on slide 11")
-    else:
-        # The evidence book originally had a second timing plan. The spoken
-        # presentation ends before the question index.
-        if text.startswith("Time: "):
-            text = text.partition(". ")[2]
-        # Talk slides reused as evidence keep their notes without the spoken timing.
-        text = re.sub(r"^\d+:\d\d\. ", "", text)
-        text = text.removeprefix("Backup for questions. ").removeprefix("Back-up. ")
+    # The evidence book originally had a second timing plan. The spoken
+    # presentation ends before the question index.
+    if text.startswith("Time: "):
+        text = text.partition(". ")[2]
+    # Talk slides reused as evidence keep their notes without the spoken timing.
+    text = re.sub(r"^\d+:\d\d\. ", "", text)
+    text = text.removeprefix("Backup for questions. ").removeprefix("Back-up. ")
     set_text(body, text)
 
 

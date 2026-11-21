@@ -52,6 +52,19 @@ Paired 95% intervals, borrower bootstrap with the fitted models held fixed; trai
 
 **Prosper had smaller differences.** On its single chronological holdout, accepted-label error was 1.18–1.43 points. Bayesian evaluation with the logistic prior lowered it to 0.11–0.50 points. All five intervals for the unaudited BASL training gap included zero. At $s=2$, training the scorecard on accepts plus audited rejects lowered its ABR by 0.33 points (paired 95% interval 0.03–0.65 lower). This was the only grid point where that training contrast’s interval excluded zero. These intervals are pointwise across the grid.
 
+## Exploratory follow-up: how much of the gap to full information does each fix close?
+
+Added on 20 November 2026, after every result above was known; [diagnostics.py](../src/paper11/diagnostics.py) writes [full_information.csv](../results/full_information.csv) and [its folds](../results/full_information_folds.csv). The paper's simulation reports that BASL recovers 24.8% of the gap between accepted-only training and training with every outcome. We fit that full-information scorecard on each hard-cutoff fitting split, with the same features, seed and XGBoost settings, and compute the same share, (A − method) / (A − full), from fold-mean test ABR. The other four scorecards are refitted and must match the selection-strength fits exactly.
+
+| Hard cutoff | Taiwan | Prosper |
+|---|---:|---:|
+| Test ABR: accepted-only / full information | 8.53% / 7.20% | 3.62% / 3.39% |
+| Share of the gap closed by BASL | −223% [−318%, −169%] | gap too small to measure |
+| … by the 5% audit, ordinary training | 109% [91%, 135%] | gap too small to measure |
+| … by the audit plus BASL | 100% [84%, 122%] | gap too small to measure |
+
+Intervals use 499 shared Poisson borrower weights with the fitted models held fixed. On Taiwan the audited ordinary scorecard closes the whole gap within sampling error; a share above 100% means its test ABR was slightly lower than the full-information model's. BASL widens the gap in every fold (−706% to −72%). On Prosper the gap is 0.24 points, so the ratio's interval spans several hundred percent in both directions. One audit draw per fold and one audit size remain the limits.
+
 ## Limits
 
 Both cohorts consist of historically financed borrowers. We impose a simulated decision on them using pre-outcome features. The threshold that matches acceptance uses the entire cohort's index values, including future-period features on Prosper. The chronological holdout therefore tests the scorecard under a retrospective policy simulation. The economic cost of funding audited loans is outside this experiment.

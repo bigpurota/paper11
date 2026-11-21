@@ -57,8 +57,11 @@ def test_defense_shows_both_archived_platform_refits():
     with ZipFile(DECK) as package:
         slide = ET.fromstring(package.read("ppt/slides/slide9.xml"))
     text = " ".join(run.text or "" for run in slide.iter(DRAWING+"t"))
-    for platform, label in (("macos-arm64", "macOS"), ("linux-x86_64", "Linux")):
+    pairs = []
+    for platform in ("macos-arm64", "linux-x86_64"):
         row = refits[platform]
         estimates = [f"{100 * float(row[key]):+.2f}".replace("-", "−")
                      for key in ("B_minus_A", "Bplus_minus_Aplus")]
-        assert f"{label} {estimates[0]} / {estimates[1]}" in text
+        pairs.append(" / ".join(estimates))
+    assert "two independent refits" in text.lower()
+    assert f"{pairs[0]} and {pairs[1]} pp" in text

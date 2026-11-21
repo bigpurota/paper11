@@ -953,6 +953,35 @@ def verify_selection_grid(out):
     print("PASS: all 12 selection designs reconcile with their folds and both reference policies.")
 
 
+def verify_diagnostics(out):
+    """Full-information shares rebuild from fold ABRs; drift windows match the published partitions."""
+    folds = pd.read_csv(out / "full_information_folds.csv").set_index(["dataset", "fold"]).sort_index()
+    grid = pd.read_csv(out / "selection_strength_folds.csv").query("strength == 'hard'").set_index(
+        ["dataset", "fold"]).sort_index()
+    shared = ["A_test_abr", "B_test_abr", "A+_test_abr", "B+_test_abr"]
+    assert list(folds.index) == list(grid.index) and folds.strength.eq("hard").all()
+    assert_allclose(folds[shared], grid[shared], atol=1e-9)
+    summary = pd.read_csv(out / "full_information.csv").set_index(["dataset", "quantity"]).sort_index()
+    for dataset, fitted in folds.groupby(level="dataset"):
+        mean = fitted.mean(numeric_only=True)
+        for column in [*shared, "full_test_abr"]:
+            assert_allclose(summary.loc[(dataset, column), "estimate"], mean[column], atol=1e-9)
+        for name in ("B", "A+", "B+"):
+            row = summary.loc[(dataset, f"recovery_{name}")]
+            share = (fitted.A_test_abr - fitted[f"{name}_test_abr"]) / (fitted.A_test_abr - fitted.full_test_abr)
+            expected = (mean.A_test_abr - mean[f"{name}_test_abr"]) / (mean.A_test_abr - mean.full_test_abr)
+            assert_allclose([row.estimate, row.fold_min, row.fold_max], [expected, share.min(), share.max()], atol=1e-9)
+            assert row.ci_low <= row.ci_high
+    drift = pd.read_csv(out / "score_drift.csv").set_index(["dataset", "fold", "role"]).sort_index()
+    parts = pd.read_csv(out / "partitions.csv").set_index(["dataset", "fold", "role"]).sort_index()
+    assert list(drift.index) == list(parts.index) and drift.n.eq(parts.n).all()
+    assert drift.psi.ge(0).all() and drift.xs("fit", level="role").psi.eq(0).all()
+    assert drift.mean_score.between(0, 1).all()
+    # Random Taiwan folds share one population, so their index must stay near zero.
+    assert drift.loc["taiwan"].psi.lt(.05).all()
+    print("PASS: full-information shares rebuild from fold ABRs; drift windows match the published partitions.")
+
+
 def verify(out):
     def read(name):
         return pd.read_csv(out / (name + ".csv"))
@@ -1006,6 +1035,7 @@ def verify(out):
     verify_local_trust(out)
     verify_early_payments(out)
     verify_selection_grid(out)
+    verify_diagnostics(out)
     print("PASS: locked cash contrasts, profile history, cross-lender signals, transfer predictions, matched Bondora receipts, SBA 7(a) outcomes, EVSI thresholds, binary joint laws, chronological SBA replay, information for policy comparisons, adaptive exploration, equivalent worlds, minimax regret, sequential audit, rolling decompositions, policy bounds, randomized offers, cohort counts, score ranges, calibration counts, RMSE, financial identities, paper comparisons, paired contrasts and randomized audit.")
 
 

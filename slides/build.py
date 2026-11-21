@@ -1,4 +1,4 @@
-"""Refresh the editable PPTX from checked analysis outputs, then export its PDF."""
+"""Refresh the editable defense PPTX from checked analysis outputs, then export its PDF."""
 import csv
 from pathlib import Path
 import posixpath
@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 RESULTS = HERE.parent / "results"
 SOURCES = {"simulation_fig2.png", "calibration.png", "vintage_forecasts.png", "bounds_frontier.png"}
 # Drawn here from the aggregate results at the size of their frames in the talk template.
-TALK_FIGURES = {"talk_pilot.png", "talk_dutch.png", "talk_strength.png"}
+TALK_FIGURES = {"talk_example.png", "talk_pilot.png", "talk_dutch.png", "talk_strength.png"}
 STRENGTHS = ["0.5", "1", "2", "4", "hard"]
 INK, MUTED, GRID, AXIS = "#0E2D69", "#52514e", "#e1e0d9", "#c3c2b7"
 BLUE, ORANGE, AQUA, GRAY = "#2a78d6", "#eb6834", "#1baf7a", "#8d8b85"
@@ -173,6 +173,8 @@ def transfer_fields():
     fields["x_cut"] = percent(float(origin["repay_margin"]) / (float(origin["repay_margin"]) - float(origin["default_margin"])))
     for label, column in (("loss","euro_pilot"), ("avoid","euro_gross"), ("net","euro_net")):
         fields["x_"+label] = f"{abs(float(late[column])):,.2f}"
+    fields["x_loss_rounded"] = f"€{abs(float(late['euro_pilot'])):,.0f}"
+    fields["x_n"] = late["portfolio_n"]
     profiles = read_table("pilot_profiles_selected")
     for key, origin in [("jul", "2018-07"), ("oct", "2018-10"), ("nov", "2018-11"), ("feb", "2019-02")]:
         row = one(profiles, country="EE", customer="returning", pilot_month=origin)
@@ -324,6 +326,15 @@ def early_payment_fields():
     return values
 
 
+def diagnostic_fields():
+    """Exploratory full-information shares and score drift (src/paper11/diagnostics.py)."""
+    share = {r["quantity"]: float(r["estimate"]) for r in read_table("full_information") if r["dataset"] == "taiwan"}
+    test = one(read_table("score_drift"), dataset="prosper", role="test")
+    return {"fi_tw_audit": f"{100 * share['recovery_A+']:.0f}%",
+            "fi_tw_basl": f"{100 * share['recovery_B']:.0f}%".replace("-", "−"),
+            "psi_pr_test": f"{float(test['psi']):.2f}"}
+
+
 def result_fields():
     comparison = read_table("paper_comparison")
     training = read_table("training")
@@ -339,6 +350,7 @@ def result_fields():
     fields.update(frequency_fields())
     fields.update(local_trust_fields())
     fields.update(early_payment_fields())
+    fields.update(diagnostic_fields())
     fields["talk_iv_loss"] = f"{float(fields['iv_loss']):.2f}"
     fields["talk_iv_per"] = f"{float(fields['iv_per']):.2f}"
     fields["talk_iv_cap"] = f"{float(fields['iv_cap']):.2f}"
@@ -496,7 +508,7 @@ def result_fields():
 
 
 def talk_figures(directory):
-    """Draw the pilot break-even and Dutch forecast charts; return their paths by alt text."""
+    """Draw the method example, pilot break-even, Dutch forecast and selection charts; return paths by alt text."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -519,6 +531,33 @@ def talk_figures(directory):
         ax.tick_params(length=0, pad=6)
 
     paths = {name: Path(directory) / name for name in TALK_FIGURES}
+
+    # Method example: Bayesian evaluation of a scorecard that approves three applicants.
+    from matplotlib.patches import FancyBboxPatch
+    fig = plt.figure(figsize=(11.5, 1.65), dpi=200)
+    ax = fig.add_axes((0, 0, 1, 1))
+    ax.set(xlim=(0, 1150), ylim=(0, 165))
+    ax.axis("off")
+    ax.text(0, 150, "Example: a new scorecard would approve three applicants", fontsize=15, fontweight="bold",
+            va="center", color=INK)
+    prior, truth = .2, .9
+    cards = [("Funded", "repaid · 0", AQUA, "-"), ("Funded", "defaulted · 1", ORANGE, "-"),
+             ("Rejected", f"prior PD {prior:.0%}", GRAY, "--")]
+    for k, (head, body, color, style) in enumerate(cards):
+        x = 215 * k
+        ax.add_patch(FancyBboxPatch((x + 4, 18), 196, 100, boxstyle="round,pad=0,rounding_size=12",
+                                    fc="#f4f6fa", ec=color, lw=2.2, ls=style))
+        ax.text(x + 102, 88, head, ha="center", va="center", fontsize=15, fontweight="bold", color=INK)
+        ax.text(x + 102, 50, body, ha="center", va="center", fontsize=15, color=INK)
+    known = (1, 2)
+    ax.text(675, 104, f"Accepted labels only:   {known[0]} / {known[1]} = {known[0] / known[1]:.0%}", fontsize=16,
+            va="center", color=MUTED)
+    ax.text(675, 66, f"Bayesian evaluation:   (1 + {prior:.2f}) / 3 = {(1 + prior) / 3:.0%}", fontsize=16,
+            va="center", color=INK, fontweight="bold")
+    ax.text(675, 28, f"If the third’s true risk is {truth:.0%}, the truth is {(1 + truth) / 3:.0%}.", fontsize=14,
+            va="center", color=MUTED, style="italic")
+    fig.savefig(paths["talk_example.png"], facecolor="white")
+    plt.close(fig)
 
     pilot = Pilot.from_model(Model())
     later = list(range(7))
@@ -650,30 +689,6 @@ def refresh_pptx(target, fields, template, figures):
             out.writestr(item, payload)
 
 
-def rehearsal_copy(source, target, keep):
-    """Copy the talk without the template slides after `keep`, which serve only as evidence pages."""
-    dropped = lambda m: int(m.group(1)) > keep
-    with ZipFile(source) as src, ZipFile(target, "w") as out:
-        for item in src.infolist():
-            name = item.filename
-            number = re.fullmatch(r"ppt/(?:slides|notesSlides)/(?:_rels/)?(?:slide|notesSlide)(\d+)\.xml(?:\.rels)?", name)
-            if number and dropped(number):
-                continue
-            payload = src.read(item).decode("utf-8") if name.endswith((".xml", ".rels")) else src.read(item)
-            if name == "ppt/presentation.xml":
-                payload = re.sub(r'<p:sldId [^>]*:id="TalkSlide(\d+)"\s*/>',
-                                 lambda m: "" if dropped(m) else m.group(0), payload)
-            elif name == "ppt/_rels/presentation.xml.rels":
-                payload = re.sub(r'<Relationship [^>]*Id="TalkSlide(\d+)"\s*/>',
-                                 lambda m: "" if dropped(m) else m.group(0), payload)
-            elif name == "[Content_Types].xml":
-                payload = re.sub(r'<Override PartName="/ppt/(?:slides|notesSlides)/(?:slide|notesSlide)(\d+)\.xml"[^>]*/>',
-                                 lambda m: "" if dropped(m) else m.group(0), payload)
-            elif name == "docProps/app.xml":
-                payload = re.sub(r"<ap:(Slides|Notes)>\d+<", rf"<ap:\1>{keep}<", payload)
-            out.writestr(item, payload)
-
-
 def main():
     office = shutil.which("soffice") or shutil.which("libreoffice")
     if not office:
@@ -682,22 +697,21 @@ def main():
     with tempfile.TemporaryDirectory(dir=HERE) as work, tempfile.TemporaryDirectory() as profile:
         tmp = Path(work)
         fields = result_fields()
-        talk, evidence, defense = tmp / "talk.pptx", tmp / "evidence.pptx", tmp / "paper11.pptx"
+        # The evidence book is an intermediate: its reserve pages follow the talk in one deck.
+        evidence, defense = tmp / "evidence.pptx", tmp / "paper11.pptx"
         full_talk = tmp / "talk-with-evidence.pptx"
         drawn = talk_figures(tmp)
         refresh_pptx(full_talk, fields, HERE / "talk-template.pptx",
                      {"simulation_fig2.png": RESULTS / "simulation_fig2.png",
                       "calibration.png": RESULTS / "calibration.png", **drawn})
-        rehearsal_copy(full_talk, talk, keep=14)
         refresh_pptx(evidence, fields, HERE / "template.pptx", {name: RESULTS / name for name in SOURCES})
         assemble(full_talk, evidence, defense, fields)
         subprocess.run([office, f"-env:UserInstallation={Path(profile).as_uri()}", "--headless",
-                        "--convert-to", "pdf", "--outdir", str(tmp), str(talk), str(evidence), str(defense)], check=True)
+                        "--convert-to", "pdf", "--outdir", str(tmp), str(defense)], check=True)
         # The README displays the same Taiwan selection chart as slide 8.
-        outputs = (defense, defense.with_suffix(".pdf"), talk.with_suffix(".pdf"),
-                   evidence, evidence.with_suffix(".pdf"), drawn["talk_strength.png"])
+        outputs = (defense, defense.with_suffix(".pdf"), drawn["talk_strength.png"])
         if not all(p.is_file() and p.stat().st_size for p in outputs):
-            raise RuntimeError("LibreOffice did not produce all presentation PDFs")
+            raise RuntimeError("LibreOffice did not produce the presentation PDF")
         for output in outputs:
             output.replace(HERE / output.name)
 

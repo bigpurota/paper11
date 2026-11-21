@@ -20,4 +20,15 @@ Using Bayesian completion lowers history RMSE from 0.786 to 0.261 percentage poi
 
 Even knowing the exact historical ABR gives a future RMSE of 2.268 percentage points. Accepted-only error partly cancels subsequent cohort variation in this period. A bank cannot rely on that cancellation recurring. The quarterly exercise covers one lender, only twelve nonoverlapping target periods and overlapping histories. It is descriptive evidence about temporal transfer, not a universal ranking of evaluators or a calendar-independent significance test.
 
+## Exploratory: how far did the score distribution move?
+
+Added on 20 November 2026 ([score_drift.csv](../results/score_drift.csv)). The population stability index from the course's credit-risk lecture compares the accepted-only scorecard's scores in the 2005–2007 fitting sample with each later window, over ten development-score deciles: PSI = Σ (a − e) ln(a/e). Values above 0.25 are a common signal to rebuild a model.
+
+| Prosper window | 2009 | Jan–Jun 2011 | Jul 2012–Feb 2013 |
+|---|---:|---:|---:|
+| PSI against 2005–2007 | 1.35 | 1.30 | 1.57 |
+| Mean predicted default probability | 6.0% | 6.6% | 6.4% |
+
+The fitting sample averaged 17.1%. The applicant mix changed sharply across Prosper's 2008–2009 pause and relaunch, which is consistent with the modest out-of-time AUC. Taiwan's random folds are a placebo: their PSI stays between 0.000 and 0.006.
+
 [All quarterly estimates](../results/vintage_forecasts.csv) · [Summary and leave-one-quarter-out checks](../results/vintage_summary.csv) · [Forecast chart](../results/vintage_forecasts.png)

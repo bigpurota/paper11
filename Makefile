@@ -46,6 +46,7 @@ all: setup
 	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.hard_selection --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.selection_strength --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.diagnostics --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) scripts/report.py --out "$(OUT)"
 	$(PY) scripts/verify.py --out "$(OUT)"
 setup: $(VENV)/.paper11-installed
@@ -96,6 +97,7 @@ extensions: setup
 	$(PY) -m paper11.rct --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.hard_selection --out "$(OUT)" --cache "$(CACHE)"
 	$(PY) -m paper11.selection_strength --out "$(OUT)" --cache "$(CACHE)"
+	$(PY) -m paper11.diagnostics --out "$(OUT)" --cache "$(CACHE)"
 report: setup
 	$(PY) scripts/report.py --out "$(OUT)"
 test: setup

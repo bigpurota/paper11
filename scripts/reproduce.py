@@ -46,6 +46,7 @@ def run(reference, cache):
                         ["-m","paper11.rct","--cache",str(cache)],
                         ["-m","paper11.hard_selection","--cache",str(cache)],
                         ["-m","paper11.selection_strength","--cache",str(cache)],
+                        ["-m","paper11.diagnostics","--cache",str(cache)],
                         ["scripts/report.py"], ["scripts/verify.py"]):
             subprocess.run([sys.executable,*command,"--out",tmp],env=env,check=True)
         actual={f.name for f in dest.iterdir()}
